@@ -1,0 +1,5 @@
+{
+  "name": "Kaçak Analiz Programı",
+  "description": "Doğalgaz sayacı kurcalama ve tüketim anomalilerini istatistiksel modelleme ve Gemini AI analizi kullanarak tespit eden gelişmiş algoritmik sistem.",
+  "requestFramePermissions": []
+}
