@@ -1,6 +1,6 @@
 import React from 'react';
 import { EngineStats } from '../types';
-import { ShieldAlert, Users, Search, Activity } from 'lucide-react';
+import { ShieldAlert, Activity, Search, Eye, ArrowUpRight } from 'lucide-react';
 
 interface StatsCardsProps {
   stats: EngineStats;
@@ -8,55 +8,81 @@ interface StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700/50 shadow-lg relative group overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-blue-500/10 transition-colors"></div>
-        <div className="flex items-center justify-between pb-4 relative z-10">
-          <h3 className="text-sm font-medium text-slate-400">Toplam Taranan</h3>
-          <div className="p-2 bg-slate-800 rounded-lg border border-slate-700">
-            <Search className="h-4 w-4 text-blue-400" />
-          </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      
+      {/* Widget 1 */}
+      <div className="bg-white rounded-[24px] p-6 shadow-apple hover:shadow-apple-hover transition-shadow duration-300 flex flex-col justify-between h-[160px]">
+        <div className="flex justify-between items-start">
+             <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Search className="h-5 w-5 text-purple-600" />
+             </div>
+             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">TOPLAM</span>
         </div>
-        <div className="text-3xl font-bold text-white tracking-tight">{stats.totalScanned.toLocaleString()}</div>
-        <p className="text-xs text-slate-500 mt-2 font-medium">Aktif Aboneler</p>
+        <div>
+            <div className="text-3xl font-semibold text-slate-900 tracking-tight">
+                {stats.totalScanned.toLocaleString()}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+                <span className="text-xs text-slate-500">Taranan Abone</span>
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium ml-2">Tamamlandı</span>
+            </div>
+        </div>
       </div>
 
-      <div className="bg-gradient-to-br from-red-900/40 to-slate-900 p-6 rounded-2xl border border-red-500/20 shadow-lg relative group overflow-hidden">
-         <div className="absolute bottom-0 left-0 w-full h-1 bg-red-500/50"></div>
-         <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
-        <div className="flex items-center justify-between pb-4 relative z-10">
-          <h3 className="text-sm font-bold text-red-400">Seviye 1: Kritik</h3>
-          <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20 animate-pulse">
-            <ShieldAlert className="h-4 w-4 text-red-500" />
-          </div>
+      {/* Widget 2 */}
+      <div className="bg-white rounded-[24px] p-6 shadow-apple hover:shadow-apple-hover transition-shadow duration-300 flex flex-col justify-between h-[160px]">
+         <div className="flex justify-between items-start">
+             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center relative">
+                <ShieldAlert className="h-5 w-5 text-red-600" />
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+             </div>
+             <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">KRİTİK</span>
         </div>
-        <div className="text-3xl font-bold text-white tracking-tight">{stats.level1Count}</div>
-        <p className="text-xs text-red-400/70 mt-2 font-medium">Acil İşlem Gerekli</p>
+        <div>
+            <div className="text-3xl font-semibold text-slate-900 tracking-tight">
+                {stats.level1Count}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+                <span className="text-xs text-slate-500">Seviye 1 Risk</span>
+                <ArrowUpRight className="h-3 w-3 text-red-500 ml-1" />
+            </div>
+        </div>
       </div>
 
-      <div className="bg-gradient-to-br from-orange-900/30 to-slate-900 p-6 rounded-2xl border border-orange-500/20 shadow-lg relative group overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-orange-500/50"></div>
-        <div className="flex items-center justify-between pb-4 relative z-10">
-          <h3 className="text-sm font-bold text-orange-400">Seviye 2: Yüksek</h3>
-          <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
-            <Activity className="h-4 w-4 text-orange-500" />
-          </div>
+      {/* Widget 3 */}
+      <div className="bg-white rounded-[24px] p-6 shadow-apple hover:shadow-apple-hover transition-shadow duration-300 flex flex-col justify-between h-[160px]">
+         <div className="flex justify-between items-start">
+             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-orange-600" />
+             </div>
+             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">YÜKSEK</span>
         </div>
-        <div className="text-3xl font-bold text-white tracking-tight">{stats.level2Count}</div>
-        <p className="text-xs text-orange-400/70 mt-2 font-medium">7 Gün İçinde Denetim</p>
+        <div>
+             <div className="text-3xl font-semibold text-slate-900 tracking-tight">{stats.level2Count}</div>
+             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '60%' }}></div>
+             </div>
+             <div className="text-xs text-slate-500 mt-1">Seviye 2 Tespit</div>
+        </div>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700/50 shadow-lg relative group overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl -mr-6 -mt-6"></div>
-        <div className="flex items-center justify-between pb-4 relative z-10">
-          <h3 className="text-sm font-medium text-indigo-400">Seviye 3: Orta</h3>
-           <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-             <Users className="h-4 w-4 text-indigo-400" />
-           </div>
+      {/* Widget 4 */}
+      <div className="bg-white rounded-[24px] p-6 shadow-apple hover:shadow-apple-hover transition-shadow duration-300 flex flex-col justify-between h-[160px]">
+         <div className="flex justify-between items-start">
+             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-apple-blue" />
+             </div>
+             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">ORTA</span>
         </div>
-        <div className="text-3xl font-bold text-white tracking-tight">{stats.level3Count}</div>
-        <p className="text-xs text-indigo-400/60 mt-2 font-medium">İzleme Listesi</p>
+        <div>
+             <div className="text-3xl font-semibold text-slate-900 tracking-tight">{stats.level3Count}</div>
+             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                <div className="bg-apple-blue h-1.5 rounded-full" style={{ width: '30%' }}></div>
+             </div>
+             <div className="text-xs text-slate-500 mt-1">Seviye 3 Tespit</div>
+        </div>
       </div>
+
     </div>
   );
 };

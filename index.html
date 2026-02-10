@@ -6,19 +6,38 @@
     <title>Kaçak Analiz Programı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
             },
             colors: {
-              slate: {
-                850: '#1e293b',
-                900: '#0f172a',
-                950: '#020617',
+              apple: {
+                gray: '#F5F5F7',
+                blue: '#007AFF',
+                card: '#FFFFFF',
+                text: '#1D1D1F',
+                border: '#E5E5EA'
+              },
+              bg: {
+                main: '#F5F5F7', 
+                card: '#FFFFFF',
+                dark: '#E5E5EA'
+              },
+              accent: {
+                purple: '#5856D6',
+                cyan: '#32ADE6',
+                pink: '#FF2D55',
+                green: '#34C759',
+                orange: '#FF9500'
               }
+            },
+            boxShadow: {
+              'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
+              'apple-hover': '0 8px 32px rgba(0, 0, 0, 0.08)',
             },
             animation: {
               'spin-slow': 'spin 3s linear infinite',
@@ -29,34 +48,62 @@
       }
     </script>
     <style>
-      body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-      /* Custom scrollbar for code blocks */
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        background-color: #F5F5F7; 
+        color: #1D1D1F; 
+        -webkit-font-smoothing: antialiased;
+      }
+      
+      /* Apple-style Scrollbar */
       ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-track { background: #1e293b; }
-      ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #C7C7CC; border-radius: 99px; border: 2px solid #F5F5F7; }
+      ::-webkit-scrollbar-thumb:hover { background: #8E8E93; }
 
       /* Custom Animations */
       @keyframes slideUpFade {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
       .animate-slide-up {
-        animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       
-      @keyframes rowEnter {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
       .table-row-animate {
-        opacity: 0; /* Start hidden */
-        animation: rowEnter 0.4s ease-out forwards;
+        opacity: 0;
+        animation: slideUpFade 0.4s ease-out forwards;
       }
 
-      /* Hover transition for table rows */
-      tr {
-        transition: background-color 0.2s ease, transform 0.2s ease;
+      tr { transition: background-color 0.15s ease; }
+
+      /* Map Styles */
+      .pulsing-dot {
+        width: 16px; height: 16px;
+        background-color: #FF3B30;
+        border-radius: 50%;
+        position: relative;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      .pulsing-dot::after {
+        content: '';
+        position: absolute;
+        top: -2px; left: -2px; bottom: -2px; right: -2px;
+        border-radius: 50%;
+        animation: ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+        border: 2px solid rgba(255, 59, 48, 0.7);
+      }
+      @keyframes ring {
+        0% { transform: scale(0.8); opacity: 1; border-width: 4px; }
+        100% { transform: scale(3.5); opacity: 0; border-width: 0px; }
+      }
+      
+      .leaflet-container {
+        width: 100%; height: 100%;
+        background: #F2F2F7;
+        border-radius: 1.5rem;
       }
     </style>
   <script type="importmap">
@@ -65,10 +112,13 @@
     "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "recharts": "https://esm.sh/recharts@^2.12.0",
+    "react-dom": "https://esm.sh/react-dom@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
-    "xlsx": "https://esm.sh/xlsx@0.18.5"
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "leaflet": "https://esm.sh/leaflet@1.9.4",
+    "react-leaflet": "https://esm.sh/react-leaflet@4.2.1?external=react,react-dom,leaflet"
   }
 }
 </script>

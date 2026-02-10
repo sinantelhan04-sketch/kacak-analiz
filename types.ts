@@ -15,19 +15,37 @@ export interface MonthlyData {
 
 export interface Subscriber {
   tesisatNo: string;
-  muhatapNo: string; // Primary/Current display value
-  relatedMuhatapNos: string[]; // History of all Muhataps seen on this Tesisat (e.g. tenant changes)
-  address: string;
+  muhatapNo: string; 
+  relatedMuhatapNos: string[]; 
+  address: string; // Still kept for display if available
+  location: {
+    lat: number;
+    lng: number;
+  };
   aboneTipi: 'Residential' | 'Commercial' | 'Industrial';
   consumption: MonthlyData;
   isVacant: boolean;
+}
+
+export interface ReferenceLocation {
+  id: string;
+  lat: number;
+  lng: number;
+  type: 'Reference';
 }
 
 export interface RiskScore {
   tesisatNo: string;
   muhatapNo: string;
   address: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  district: string;      
+  neighborhood: string;  
   aboneTipi: string;
+  consumption: MonthlyData; // Added actual consumption data here
   totalScore: number;
   breakdown: {
     referenceMatch: number;
@@ -37,34 +55,43 @@ export interface RiskScore {
   };
   riskLevel: 'Seviye 1 (Kritik)' | 'Seviye 2 (Yüksek)' | 'Seviye 3 (Orta)' | 'Düşük';
   reason: string;
-  heatingSensitivity: number; // Ratio
+  heatingSensitivity: number; 
   seasonalStats: {
     winterAvg: number;
     summerAvg: number;
   };
-  isTamperingSuspect: boolean; // Specific flag for "Winter approx Summer" logic
-  is120RuleSuspect: boolean; // Specific flag for "10 < Jan, Feb < 120" logic
+  isTamperingSuspect: boolean; 
+  is120RuleSuspect: boolean; 
   rule120Data?: {
       jan: number;
       feb: number;
   };
   inconsistentData: {
-    hasWinterDrop: boolean; // True if drops occur in Nov, Dec, or Jan
-    dropDetails: string[]; // e.g. "Kasım -> Aralık Düşüşü"
-    isSemesterSuspect: boolean; // True if drop is ONLY in Feb (Jan -> Feb)
+    hasWinterDrop: boolean; 
+    dropDetails: string[]; 
+    isSemesterSuspect: boolean; 
     volatilityScore: number;
   };
 }
 
 export interface Hotspot {
-  street: string;
+  street: string; // Can be used as Region ID
   count: number;
   avgScore: number;
+  center: { lat: number; lng: number };
 }
 
 export interface EngineStats {
   totalScanned: number;
-  level1Count: number; // Critical
-  level2Count: number; // High
-  level3Count: number; // Medium/Low
+  level1Count: number; 
+  level2Count: number; 
+  level3Count: number; 
+}
+
+export interface AnalysisStatus {
+  reference: boolean;
+  tampering: boolean;
+  inconsistent: boolean;
+  rule120: boolean;
+  georisk: boolean;
 }
