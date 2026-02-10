@@ -94,7 +94,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                   <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside marker:text-orange-500">
                       <li><strong>Mantık:</strong> Kış (Ara-Oca-Şub) ve Yaz (Haz-Tem-Ağu) ortalamaları karşılaştırılır.</li>
                       <li><strong>Isınma Katsayısı:</strong> Normalde kış tüketimi yazın en az 5-10 katı olmalıdır.</li>
-                      <li><strong>Kural:</strong> Eğer Kış Ortalaması > 30 iken, (Kış / Yaz) oranı 3.5'in altındaysa sayaç bypass edilmiş veya müdahale görmüş olabilir. <strong>(+30 Puan)</strong></li>
+                      <li><strong>Kural:</strong> Eğer Kış Ortalaması &gt; 30 iken, (Kış / Yaz) oranı 3.5&apos;in altındaysa sayaç bypass edilmiş veya müdahale görmüş olabilir. <strong>(+30 Puan)</strong></li>
                   </ul>
               </div>
 
@@ -109,7 +109,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                   <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside marker:text-blue-500">
                       <li><strong>Mantık:</strong> Yasal/Yönetmelik gereği belirli bir ısınma alt limiti kontrolü.</li>
                       <li><strong>Kriter:</strong> Ocak ve Şubat aylarının <span className="underline decoration-blue-300">her ikisi de</span> 120 sm³ altındaysa.</li>
-                      <li><strong>Boş Ev İstisnası:</strong> Eğer iki ayın toplamı 25 sm³ altındaysa "Boş Ev" kabul edilir ve ceza puanı verilmez.</li>
+                      <li><strong>Boş Ev İstisnası:</strong> Eğer iki ayın toplamı 25 sm³ altındaysa &quot;Boş Ev&quot; kabul edilir ve ceza puanı verilmez.</li>
                       <li><strong>Puanlama:</strong> Tüketim ne kadar düşükse puan o kadar artar (30-45 Puan arası).</li>
                   </ul>
               </div>
@@ -120,10 +120,10 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                       <div className="p-2 bg-pink-100 text-pink-600 rounded-lg">
                           <TrendingDown className="h-5 w-5" />
                       </div>
-                      <h4 className="font-bold text-slate-700">Tutarsızlık & Trend</h4>
+                      <h4 className="font-bold text-slate-700">Tutarsızlık ve Trend</h4>
                   </div>
                   <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside marker:text-pink-500">
-                      <li><strong>Ani Düşüş (+20 Puan):</strong> Bir önceki aya göre %60'tan fazla düşüş (Kasım->Aralık veya Aralık->Ocak).</li>
+                      <li><strong>Ani Düşüş (+20 Puan):</strong> Bir önceki aya göre %60&apos;tan fazla düşüş (Kasım-Aralık veya Aralık-Ocak).</li>
                       <li><strong>Düz Çizgi (+25 Puan):</strong> Kış aylarında tüketimin standart sapması çok düşükse (Sabit endeksli faturalandırma şüphesi).</li>
                       <li><strong>ZigZag:</strong> Tüketimin bir ay artıp diğer ay sert düşmesi (Sayaca dönemsel müdahale).</li>
                   </ul>
@@ -140,7 +140,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                    </h4>
                    <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
                        Sistem, yüksek riskli abonelerin adreslerini ayrıştırır (İlçe, Mahalle, Sokak). 
-                       Eğer bir sokakta yoğun kaçak/anomali tespiti yapılmışsa, o sokaktaki diğer "sınırda kalan" düşük tüketimli abonelere otomatik olarak <strong>+10 Bölgesel Risk Puanı</strong> eklenir. 
+                       Eğer bir sokakta yoğun kaçak/anomali tespiti yapılmışsa, o sokaktaki diğer &quot;sınırda kalan&quot; düşük tüketimli abonelere otomatik olarak <strong>+10 Bölgesel Risk Puanı</strong> eklenir. 
                        Bu sayede kaçak kullanımın yaygın olduğu bölgelerdeki gizli vakalar öne çıkarılır.
                    </p>
                </div>
