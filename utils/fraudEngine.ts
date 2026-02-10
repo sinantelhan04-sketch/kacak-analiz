@@ -146,6 +146,7 @@ export const createBaseRiskScore = (
         district: district,
         neighborhood: '',
         aboneTipi: sub.aboneTipi,
+        rawAboneTipi: sub.rawAboneTipi,
         consumption: sub.consumption,
         totalScore: 0,
         breakdown: { referenceMatch: 0, consumptionAnomaly: 0, trendInconsistency: 0, geoRisk: 0 },
@@ -179,6 +180,14 @@ export const createBaseRiskScore = (
 
 // 2. TAMPERING ANALYSIS (Seasonal)
 export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
+    // NEW: Exclude specific commercial types from tampering analysis
+    if (score.rawAboneTipi) {
+        const raw = score.rawAboneTipi.toLocaleUpperCase('tr');
+        if (raw.includes("TİCARİ İŞLETME (ISINMA)") || raw.includes("TİCARİ İŞLETME (ÜRETİM)")) {
+            return score; // Skip analysis, return without flag
+        }
+    }
+
     const isCommercial = score.aboneTipi === 'Commercial';
     const thresholdRatio = isCommercial ? 2.0 : 3.5;
     const minWinterCons = isCommercial ? 100 : 30;
@@ -208,12 +217,25 @@ export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
 
 // 3. RULE 120 ANALYSIS
 export const applyRule120Analysis = (score: RiskScore): RiskScore => {
+    // NEW RULE: Only apply 120 rule if subscriber type is EXACTLY "KONUT (KOMBİ)"
+    const requiredType = "KONUT (KOMBİ)";
+    const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
+
+    // If type doesn't match, skip this analysis
+    if (rawType !== requiredType) {
+        return score;
+    }
+
+    // NEW CHECK: Skip if muhatapNo is empty
+    if (!score.muhatapNo || score.muhatapNo.trim() === '') {
+        return score;
+    }
+
     const jan = score.consumption.jan;
     const feb = score.consumption.feb;
     const janFebTotal = jan + feb;
-    const isCommercial = score.aboneTipi === 'Commercial';
     
-    const MAX_LIMIT = isCommercial ? 200 : 120;
+    const MAX_LIMIT = 120; // 120 sm3 rule implies 120 limit
     const VACANT_LIMIT = 25; 
 
     const isBelowThreshold = (jan < MAX_LIMIT) && (feb < MAX_LIMIT);
@@ -410,6 +432,7 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       location: { lat, lng },
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
+      rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : 'KONUT (KOMBİ)', // Matches 120 rule check
       consumption: data,
       isVacant: false
     });

@@ -23,6 +23,7 @@ export interface Subscriber {
     lng: number;
   };
   aboneTipi: 'Residential' | 'Commercial' | 'Industrial';
+  rawAboneTipi?: string;
   consumption: MonthlyData;
   isVacant: boolean;
 }
@@ -45,6 +46,7 @@ export interface RiskScore {
   district: string;      
   neighborhood: string;  
   aboneTipi: string;
+  rawAboneTipi?: string;
   consumption: MonthlyData; // Added actual consumption data here
   totalScore: number;
   breakdown: {

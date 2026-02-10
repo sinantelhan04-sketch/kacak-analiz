@@ -240,7 +240,8 @@ const App: React.FC = () => {
             totalRows++;
 
             if(!subscriberMap.has(id)){
-                let typeStr = idxType !== -1 ? String(row[idxType]).toLowerCase() : 'mesken';
+                const rawTypeStr = idxType !== -1 ? String(row[idxType]) : 'Mesken';
+                let typeStr = rawTypeStr.toLowerCase();
                 const isCommercial = typeStr.includes('ticar') || typeStr.includes('resmi') || typeStr.includes('sanayi');
                 const initMuhatap = idxMuhatap !== -1 ? cleanVal(row[idxMuhatap]) : `M-${rawId}`;
 
@@ -249,6 +250,7 @@ const App: React.FC = () => {
                     address: '', 
                     location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
                     aboneTipi: isCommercial ? 'Commercial' : 'Residential',
+                    rawAboneTipi: rawTypeStr,
                     consumption: {jan:0, feb:0, mar:0, apr:0, may:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0},
                     isVacant: false
                 });
