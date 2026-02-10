@@ -234,9 +234,9 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     const jan = score.consumption.jan;
     const feb = score.consumption.feb;
     
-    // NEW LOGIC: 25 < Consumption < 121 for BOTH months
-    const isJanSuspect = jan > 25 && jan < 121;
-    const isFebSuspect = feb > 25 && feb < 121;
+    // NEW LOGIC: 25 < Consumption < 110 for BOTH months (Updated range)
+    const isJanSuspect = jan > 25 && jan < 110;
+    const isFebSuspect = feb > 25 && feb < 110;
     const is120RuleSuspect = isJanSuspect && isFebSuspect;
 
     const reasons = score.reason ? score.reason.split(', ') : [];
@@ -401,9 +401,11 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     };
     if (isCommercial) Object.keys(data).forEach(k => { /* @ts-ignore */ data[k] *= 2.5; });
 
-    // Update demo data to trigger new 120 rule (25 < x < 121)
+    // Update demo data to trigger new 120 rule (25 < x < 110)
+    // 35/50 fits the 25-110 range, triggers rule.
     if (i === 12) { data.jan = 35; data.feb = 50; data.dec = 150; }
-    if (i === 13) { data.jan = 115; data.feb = 110; data.dec = 150; }
+    // 95/100 fits the 25-110 range, triggers rule (previously 115 which was > 110)
+    if (i === 13) { data.jan = 95; data.feb = 100; data.dec = 150; }
 
     let muhatapNo = `M-${id}`;
     let tesisatNo = id.toString();

@@ -108,8 +108,8 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                   </div>
                   <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside marker:text-blue-500">
                       <li><strong>Mantık:</strong> Yasal/Yönetmelik gereği belirli bir ısınma alt limiti kontrolü.</li>
-                      <li><strong>Kriter:</strong> Ocak ve Şubat aylarının <span className="underline decoration-blue-300">her ikisi de</span> 25 sm³ ile 121 sm³ aralığındaysa.</li>
-                      <li><strong>Amaç:</strong> Boş evler (25 altı) ve normal kullanımlar (121 üstü) hariç tutularak, sadece şüpheli düşük tüketim aralığına odaklanılır.</li>
+                      <li><strong>Kriter:</strong> Ocak ve Şubat aylarının <span className="underline decoration-blue-300">her ikisi de</span> 25 sm³ ile 110 sm³ aralığındaysa.</li>
+                      <li><strong>Amaç:</strong> Boş evler (25 altı) ve normal kullanımlar (110 üstü) hariç tutularak, sadece şüpheli düşük tüketim aralığına odaklanılır.</li>
                       <li><strong>Puanlama:</strong> Tüketim ne kadar düşükse puan o kadar artar (30-45 Puan arası).</li>
                   </ul>
               </div>
