@@ -23,6 +23,8 @@ export interface Subscriber {
     lat: number;
     lng: number;
   };
+  city?: string;      // NEW: Parsed from Excel
+  district?: string;  // NEW: Parsed from Excel
   aboneTipi: 'Residential' | 'Commercial' | 'Industrial';
   rawAboneTipi?: string;
   consumption: MonthlyData;
@@ -44,6 +46,7 @@ export interface RiskScore {
     lat: number;
     lng: number;
   };
+  city: string;          // NEW
   district: string;      
   neighborhood: string;  
   aboneTipi: string;

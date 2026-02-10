@@ -30,6 +30,8 @@ const App: React.FC = () => {
   // ANALYSIS RESULT STATE
   const [riskData, setRiskData] = useState<RiskScore[]>([]);
   const [stats, setStats] = useState<EngineStats>({ totalScanned: 0, level1Count: 0, level2Count: 0, level3Count: 0 });
+  const [detectedCity, setDetectedCity] = useState<string>('İSTANBUL');
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
   
   // ON-DEMAND ANALYSIS STATE
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>({
@@ -220,6 +222,8 @@ const App: React.FC = () => {
         const idxType = getColIndex(headers, ['abone tipi', 'tip', 'abone', 'abonetipi']);
         const idxLat = getColIndex(headers, ['enlem', 'lat', 'latitude']);
         const idxLng = getColIndex(headers, ['boylam', 'lng', 'long', 'longitude']);
+        const idxCity = getColIndex(headers, ['il', 'sehir', 'city', 'vilayet']); // NEW
+        const idxDistrict = getColIndex(headers, ['ilce', 'district', 'bolge']); // NEW
         const idxMonth = getColIndex(headers, ['ay', 'month', 'donem']);
         const idxCons = getColIndex(headers, ['sm3', 'tuketim', 'm3', 'sarfiyat']);
         
@@ -250,6 +254,8 @@ const App: React.FC = () => {
                     tesisatNo: rawId, muhatapNo: initMuhatap, relatedMuhatapNos: [initMuhatap],
                     address: '', 
                     location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
+                    city: idxCity !== -1 ? cleanVal(row[idxCity]) : '',
+                    district: idxDistrict !== -1 ? cleanVal(row[idxDistrict]) : '',
                     aboneTipi: isCommercial ? 'Commercial' : 'Residential',
                     rawAboneTipi: rawTypeStr,
                     consumption: {jan:0, feb:0, mar:0, apr:0, may:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0},
@@ -328,6 +334,32 @@ const App: React.FC = () => {
         // Sort by initial score (Reference matches will be on top)
         initialRisks.sort((a,b) => b.totalScore - a.totalScore);
 
+        // DETECT CITY AND DISTRICTS
+        const cityCounts: Record<string, number> = {};
+        const districtSet = new Set<string>();
+
+        initialRisks.forEach(r => {
+             if (r.city && r.city.trim()) {
+                 const c = r.city.toLocaleUpperCase('tr');
+                 cityCounts[c] = (cityCounts[c] || 0) + 1;
+             }
+             if (r.district && r.district.trim()) {
+                 districtSet.add(r.district.toLocaleUpperCase('tr'));
+             }
+        });
+
+        // Find most frequent city
+        let bestCity = 'İSTANBUL';
+        let maxCount = 0;
+        for (const [c, count] of Object.entries(cityCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                bestCity = c;
+            }
+        }
+        
+        setDetectedCity(bestCity);
+        setAvailableDistricts(Array.from(districtSet).sort());
         setRawSubscribers(subs);
         setRefMuhatapIds(rM);
         setRefTesisatIds(rT);
@@ -414,6 +446,8 @@ const App: React.FC = () => {
       setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false });
       setFiles({ a: null, b: null });
       setDuplicateInfo(null);
+      setAvailableDistricts([]);
+      setDetectedCity('İSTANBUL');
       fileObjects.current = { a: null, b: null };
       setValidationError(null);
       if (fileInputRefA.current) fileInputRefA.current.value = '';
@@ -442,7 +476,9 @@ const App: React.FC = () => {
           Seviye: r.riskLevel,
           Enlem: r.location.lat,
           Boylam: r.location.lng,
-          Adres: r.address
+          Adres: r.address,
+          Il: r.city,
+          Ilce: r.district
       })));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "AnalizSonuclari");
@@ -597,7 +633,7 @@ const App: React.FC = () => {
                                     {files.b ? <CheckCircle className="h-8 w-8 text-green-600" /> : <FileSpreadsheet className="h-8 w-8 text-slate-400 group-hover:text-apple-blue" />}
                                 </div>
                                 <h3 className="font-semibold text-slate-900 mb-1">Hedef Liste (Tüketim)</h3>
-                                <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.b ? files.b : 'Tesisat, Muhatap, Abone Tipi, Ay, Sm3...'}</p>
+                                <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.b ? files.b : 'Tesisat, Muhatap, Abone Tipi, Ay, Sm3, İl, İlçe...'}</p>
                             </>
                         )}
                     </div>
@@ -714,6 +750,8 @@ const App: React.FC = () => {
                                         referenceLocations={refLocations} 
                                         selectedDistrict={selectedDistrict}
                                         onDistrictSelect={setSelectedDistrict}
+                                        detectedCity={detectedCity}
+                                        availableDistricts={availableDistricts}
                                     />
                                 ) : (
                                     <div className="h-full flex items-center justify-center bg-white rounded-[30px] border border-slate-200 shadow-sm p-6 text-center">
@@ -760,6 +798,8 @@ const App: React.FC = () => {
                                         referenceLocations={refLocations}
                                         selectedDistrict={selectedDistrict}
                                         onDistrictSelect={setSelectedDistrict}
+                                        detectedCity={detectedCity}
+                                        availableDistricts={availableDistricts}
                                     />
                                 </div>
                                 <div className="h-[500px]">

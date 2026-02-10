@@ -58,7 +58,7 @@ const isPointInPolygon = (lat: number, lng: number, polygon: [number, number][])
   return inside;
 };
 
-const identifyDistrict = (lat: number, lng: number): string => {
+const identifyDistrictGeometric = (lat: number, lng: number): string => {
   for (const [name, poly] of Object.entries(ISTANBUL_DISTRICTS)) {
     if (isPointInPolygon(lat, lng, poly)) return name;
   }
@@ -133,7 +133,15 @@ export const createBaseRiskScore = (
     fraudMuhatapIds: Set<string>,
     fraudTesisatIds: Set<string>
 ): RiskScore => {
-    const district = identifyDistrict(sub.location.lat, sub.location.lng);
+    // 1. Try to use explicit district from Excel. 2. Fallback to geometric check.
+    let district = sub.district;
+    if (!district || district.trim() === '') {
+        district = identifyDistrictGeometric(sub.location.lat, sub.location.lng);
+    } else {
+        // Normalize district name (Title Case)
+        district = district.toLocaleUpperCase('tr');
+    }
+
     const winterAvg = getWinterAvg(sub.consumption);
     const summerAvg = getSummerAvg(sub.consumption);
     const heatingRatio = winterAvg / (summerAvg + 0.1);
@@ -143,6 +151,7 @@ export const createBaseRiskScore = (
         muhatapNo: sub.muhatapNo,
         address: sub.address,
         location: sub.location,
+        city: sub.city || 'Bilinmiyor',
         district: district,
         neighborhood: '',
         aboneTipi: sub.aboneTipi,
@@ -180,11 +189,9 @@ export const createBaseRiskScore = (
 
 // 2. TAMPERING ANALYSIS (Seasonal)
 export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
-    // UPDATED RULE: Apply tampering analysis ONLY if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
     const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
     const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
 
-    // If type doesn't match, skip this analysis
     if (!allowedTypes.includes(rawType)) {
         return score;
     }
@@ -202,7 +209,7 @@ export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
     let anomalyScore = score.breakdown.consumptionAnomaly;
 
     if (isSeasonalFlat) {
-        if (!score.isTamperingSuspect) { // Prevent double counting if run multiple times
+        if (!score.isTamperingSuspect) { 
             anomalyScore += 30;
             reasons.push('Mevsimsel Fark Yok (Bypass Şüphesi)');
         }
@@ -218,16 +225,13 @@ export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
 
 // 3. RULE 120 ANALYSIS
 export const applyRule120Analysis = (score: RiskScore): RiskScore => {
-    // UPDATED RULE: Apply 120 rule if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
     const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
     const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
 
-    // If type doesn't match, skip this analysis
     if (!allowedTypes.includes(rawType)) {
         return score;
     }
 
-    // NEW CHECK: Skip if muhatapNo is empty
     if (!score.muhatapNo || score.muhatapNo.trim() === '') {
         return score;
     }
@@ -236,7 +240,6 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     const feb = score.consumption.feb;
     const mar = score.consumption.mar;
     
-    // NEW LOGIC: 25 < Consumption < 110 for THREE months (Jan, Feb, Mar)
     const isJanSuspect = jan > 25 && jan < 110;
     const isFebSuspect = feb > 25 && feb < 110;
     const isMarSuspect = mar > 25 && mar < 110;
@@ -249,7 +252,6 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     if (is120RuleSuspect) {
         if (!score.is120RuleSuspect) {
             let penalty = 30;
-            // Additional penalty if extremely low total across 3 months
             const total = jan + feb + mar;
             if (total < 150) penalty = 45; 
             anomalyScore += penalty;
@@ -273,7 +275,6 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
     const winterStd = getStandardDeviation(winterVals);
     const isCommercial = score.aboneTipi === 'Commercial';
 
-    // Calculations
     const isFlatline = winterStd < 1.5 && winterAvg > 10;
     const winterTrendVals = [score.consumption.nov, score.consumption.dec, score.consumption.jan, score.consumption.feb];
     const slope = calculateTrendSlope(winterTrendVals);
@@ -292,7 +293,6 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
         reasons.push(`Ani Tüketim Düşüşü (Eğim: ${slope.toFixed(1)})`);
     }
 
-    // Drop Details
     const MIN_CONS = 40;
     const janToFebDrop = score.consumption.jan > MIN_CONS && score.consumption.feb < score.consumption.jan * 0.75; 
     
@@ -325,27 +325,20 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
 
 // 5. GEO RISK ANALYSIS (Heavy)
 export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: number, lng: number}[]): RiskScore => {
-    // UPDATED RULE: Apply geo analysis ONLY if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
     const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
     const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
 
-    // If type doesn't match, skip this analysis
     if (!allowedTypes.includes(rawType)) {
         return score;
     }
 
-    // NEW CHECK: Skip if muhatapNo is empty (Evaluates only if there is a customer)
     if (!score.muhatapNo || score.muhatapNo.trim() === '') {
         return score;
     }
 
-    // Skip if no coords
     if (score.location.lat === 0 || nearbyHighRiskPoints.length === 0) return score;
-    // Skip if already scored high (optimization)
     if (score.totalScore >= 80) return score;
 
-    // NEW LOGIC: Geo Analysis now specifically targets "120 Rule Suspects"
-    // The user wants to see which subscribers fitting the 120 Rule are ALSO near high risk areas.
     if (!score.is120RuleSuspect) return score;
 
     let geoScore = score.breakdown.geoRisk;
@@ -357,9 +350,8 @@ export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: n
         if (d < minDistance) minDistance = d;
     }
     
-    // Changed proximity threshold to 10m
     if (minDistance < 10) { 
-        if (geoScore === 0) { // Only add once
+        if (geoScore === 0) { 
             geoScore = 15;
             reasons.push(`Konum Riski (${Math.floor(minDistance)}m yakında şüpheli)`);
         }
@@ -418,13 +410,12 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
         });
     }
 
-    // Update demo data to trigger new 120 rule (25 < x < 110 for Jan, Feb, Mar)
     if (i === 12) { 
-        data.jan = 35; data.feb = 50; data.mar = 40; // All in range 25-110
+        data.jan = 35; data.feb = 50; data.mar = 40; 
         data.dec = 150; 
     }
     if (i === 13) { 
-        data.jan = 95; data.feb = 100; data.mar = 90; // All in range 25-110
+        data.jan = 95; data.feb = 100; data.mar = 90; 
         data.dec = 150; 
     }
 
@@ -447,7 +438,6 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       }
     }
     
-    // Typed loop to modify data values
     (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
         data[k] = Math.max(0, Math.floor(data[k] * (0.9 + Math.random() * 0.2)));
     });
@@ -458,6 +448,8 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       relatedMuhatapNos: relatedMuhatapNos,
       address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       location: { lat, lng },
+      city: 'İSTANBUL', // Demo data is istanbul
+      district: district,
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
       rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), 
       consumption: data,

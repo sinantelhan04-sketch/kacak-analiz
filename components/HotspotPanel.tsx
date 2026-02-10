@@ -11,6 +11,8 @@ interface HotspotPanelProps {
   referenceLocations?: ReferenceLocation[];
   selectedDistrict?: string | null;
   onDistrictSelect?: (district: string | null) => void;
+  detectedCity?: string; // NEW
+  availableDistricts?: string[]; // NEW
 }
 
 // --- Helper Component for Smooth Zooming ---
@@ -42,7 +44,14 @@ const orangePulseIcon = L.divIcon({
   popupAnchor: [0, -10]
 });
 
-const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], riskData = [], selectedDistrict, onDistrictSelect }) => {
+const HotspotPanel: React.FC<HotspotPanelProps> = ({ 
+    referenceLocations = [], 
+    riskData = [], 
+    selectedDistrict, 
+    onDistrictSelect,
+    detectedCity = 'İSTANBUL',
+    availableDistricts = []
+}) => {
   
   // MERGE DATA: Show Reference Locations AND High Risk (Level 1) detected items
   const points = useMemo(() => {
@@ -74,25 +83,41 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], ri
 
   // Calculate Center Logic
   const { center, zoomLevel } = useMemo(() => {
-    if (selectedDistrict && ISTANBUL_DISTRICTS[selectedDistrict]) {
-        const poly = ISTANBUL_DISTRICTS[selectedDistrict];
-        const latSum = poly.reduce((acc, p) => acc + p[0], 0);
-        const lngSum = poly.reduce((acc, p) => acc + p[1], 0);
-        return { 
-            center: [latSum / poly.length, lngSum / poly.length] as [number, number], 
-            zoomLevel: 13 
-        };
+    // 1. If a district is selected and it is in our Istanbul polygons (legacy support), zoom there.
+    // Otherwise, if a district is selected but no polygon, just center on points in that district.
+    if (selectedDistrict) {
+        if (ISTANBUL_DISTRICTS[selectedDistrict]) {
+            const poly = ISTANBUL_DISTRICTS[selectedDistrict];
+            const latSum = poly.reduce((acc, p) => acc + p[0], 0);
+            const lngSum = poly.reduce((acc, p) => acc + p[1], 0);
+            return { 
+                center: [latSum / poly.length, lngSum / poly.length] as [number, number], 
+                zoomLevel: 13 
+            };
+        }
+        
+        // Dynamic district center calculation
+        const districtPoints = riskData.filter(r => r.district === selectedDistrict && r.location.lat !== 0);
+        if (districtPoints.length > 0) {
+            const latSum = districtPoints.reduce((acc, p) => acc + p.location.lat, 0);
+            const lngSum = districtPoints.reduce((acc, p) => acc + p.location.lng, 0);
+            return {
+                center: [latSum / districtPoints.length, lngSum / districtPoints.length] as [number, number],
+                zoomLevel: 13
+            };
+        }
     }
 
     if (points.length === 0) return { center: [41.015, 28.978] as [number, number], zoomLevel: 10 };
     
+    // Default: Center of all points
     const latSum = points.reduce((acc, p) => acc + p.lat, 0);
     const lngSum = points.reduce((acc, p) => acc + p.lng, 0);
     return { 
         center: [latSum / points.length, lngSum / points.length] as [number, number], 
         zoomLevel: 10 
     };
-  }, [points, selectedDistrict]);
+  }, [points, selectedDistrict, riskData]);
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
@@ -100,6 +125,11 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], ri
           onDistrictSelect(val === "" ? null : val);
       }
   };
+
+  const isIstanbul = detectedCity.toUpperCase().includes('ISTANBUL') || detectedCity.toUpperCase().includes('İSTANBUL');
+
+  // Use passed availableDistricts if present, otherwise fallback to Istanbul constant keys
+  const districtList = availableDistricts.length > 0 ? availableDistricts : Object.keys(ISTANBUL_DISTRICTS);
 
   return (
     <div className="bg-white rounded-[30px] border border-slate-200 shadow-sm flex flex-col h-full relative overflow-hidden group">
@@ -115,8 +145,8 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], ri
                     </div>
                     <div>
                         <h3 className="font-bold text-slate-800 text-sm">Coğrafi Risk Haritası</h3>
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium">
-                            {selectedDistrict ? selectedDistrict.toUpperCase() : "TÜM BÖLGELER"}
+                        <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium uppercase">
+                            {selectedDistrict ? selectedDistrict : `TÜM ${detectedCity}`}
                         </p>
                     </div>
                 </div>
@@ -133,8 +163,8 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], ri
                     onChange={handleDistrictChange}
                     className="pl-9 pr-8 py-2.5 bg-white/90 backdrop-blur-md border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 appearance-none cursor-pointer min-w-[160px]"
                  >
-                     <option value="">Tüm İstanbul</option>
-                     {Object.keys(ISTANBUL_DISTRICTS).map(d => (
+                     <option value="">Tüm {detectedCity}</option>
+                     {districtList.sort().map(d => (
                          <option key={d} value={d}>{d}</option>
                      ))}
                  </select>
@@ -172,8 +202,8 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({ referenceLocations = [], ri
             
             <MapController center={center} zoom={zoomLevel} />
 
-            {/* Render Districts */}
-            {Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
+            {/* Render Districts - ONLY IF ISTANBUL (Because we only have polygons for Istanbul) */}
+            {isIstanbul && Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
                 const isSelected = selectedDistrict === name;
                 
                 return (
