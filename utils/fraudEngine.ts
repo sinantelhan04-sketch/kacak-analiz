@@ -180,12 +180,13 @@ export const createBaseRiskScore = (
 
 // 2. TAMPERING ANALYSIS (Seasonal)
 export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
-    // NEW: Exclude specific commercial types from tampering analysis
-    if (score.rawAboneTipi) {
-        const raw = score.rawAboneTipi.toLocaleUpperCase('tr');
-        if (raw.includes("TİCARİ İŞLETME (ISINMA)") || raw.includes("TİCARİ İŞLETME (ÜRETİM)")) {
-            return score; // Skip analysis, return without flag
-        }
+    // UPDATED RULE: Apply tampering analysis ONLY if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
+    const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
+    const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
+
+    // If type doesn't match, skip this analysis
+    if (!allowedTypes.includes(rawType)) {
+        return score;
     }
 
     const isCommercial = score.aboneTipi === 'Commercial';
