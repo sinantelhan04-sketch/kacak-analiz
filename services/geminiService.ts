@@ -9,7 +9,7 @@ export const generateComprehensiveReport = async (
   riskData: RiskScore[]
 ): Promise<string> => {
   if (!API_KEY) {
-    return "API Anahtarı bulunamadı. Lütfen Gemini özelliklerini kullanmak için ortamı yapılandırın.";
+    return "API Anahtarı bulunamadı. Vercel panelinde 'Settings > Environment Variables' kısmına 'API_KEY' (veya 'VITE_API_KEY') ekleyip projeyi yeniden deploy edin.";
   }
 
   const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -63,6 +63,6 @@ export const generateComprehensiveReport = async (
     return response.text || "Yanıt oluşturulamadı.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Rapor oluşturulamadı. Lütfen API yapılandırmasını kontrol edin.";
+    return "Rapor oluşturulamadı. API hatası veya kota aşımı olabilir.";
   }
 };

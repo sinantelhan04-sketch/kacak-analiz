@@ -6,7 +6,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || '')
+      // API_KEY yoksa VITE_API_KEY'e de bakar
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY || '')
     }
   };
 });
