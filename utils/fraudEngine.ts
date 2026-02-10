@@ -334,6 +334,11 @@ export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: n
         return score;
     }
 
+    // NEW CHECK: Skip if muhatapNo is empty (Evaluates only if there is a customer)
+    if (!score.muhatapNo || score.muhatapNo.trim() === '') {
+        return score;
+    }
+
     // Skip if no coords
     if (score.location.lat === 0 || nearbyHighRiskPoints.length === 0) return score;
     // Skip if already scored high (optimization)
@@ -412,7 +417,11 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       jan: 300, feb: 280, mar: 200, apr: 100, may: 50, jun: 20,
       jul: 15, aug: 15, sep: 30, oct: 80, nov: 150, dec: 290
     };
-    if (isCommercial) Object.keys(data).forEach(k => { /* @ts-ignore */ data[k] *= 2.5; });
+    if (isCommercial) {
+        (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
+            data[k] *= 2.5; 
+        });
+    }
 
     // Update demo data to trigger new 120 rule (25 < x < 110 for Jan, Feb, Mar)
     if (i === 12) { 
@@ -442,7 +451,11 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
         data.jan = 60; data.feb = 60; data.dec = 60;
       }
     }
-    Object.keys(data).forEach(k => { /* @ts-ignore */ data[k] = Math.max(0, Math.floor(data[k] * (0.9 + Math.random() * 0.2))); });
+    
+    // Updated: Properly typed object iteration for value modification
+    (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
+        data[k] = Math.max(0, Math.floor(data[k] * (0.9 + Math.random() * 0.2)));
+    });
 
     subscribers.push({
       tesisatNo: tesisatNo,
