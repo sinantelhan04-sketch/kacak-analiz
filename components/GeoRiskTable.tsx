@@ -32,10 +32,10 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
         </h3>
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Filtre: Riskli Noktaya Yakın (&lt;10m) & Tutarsız
+                Filtre: Riskli Noktaya Yakın (&lt;10m) & 120 Kuralı
              </span>
              <span className="text-[9px] text-slate-500">
-                Çevresinde kaçak tespit edilen tutarsız tüketimliler
+                Çevresinde kaçak tespit edilen 120 sm³ altı aboneler
              </span>
         </div>
       </div>
@@ -136,7 +136,7 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
                 <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                         <p>Riskli bölgelerde (Yakın Çevre) şüpheli tüketim tespit edilemedi.</p>
-                        <p className="text-xs text-slate-500 mt-1">Bu liste sadece kanıtlanmış bir kaçağa 10m'den yakın olup kendisi de az tüketenleri gösterir.</p>
+                        <p className="text-xs text-slate-500 mt-1">Bu liste sadece kanıtlanmış bir kaçağa 10m'den yakın olup kendisi de 120 Kuralına takılanları gösterir.</p>
                     </td>
                 </tr>
             )}

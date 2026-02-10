@@ -372,10 +372,10 @@ const App: React.FC = () => {
                   ...updatedData.filter(r => r.totalScore >= 80 && r.location.lat !== 0).map(r => r.location),
                   ...refLocations.map(r => ({ lat: r.lat, lng: r.lng }))
               ];
-              // Ensure inconsistency data is present for the filter
+              // Ensure Rule 120 analysis is done because Geo Analysis now depends on it
               updatedData = updatedData.map(item => {
-                  const withInconsistency = applyInconsistencyAnalysis(item);
-                  return applyGeoAnalysis(withInconsistency, highRiskPoints);
+                  const withRule120 = applyRule120Analysis(item);
+                  return applyGeoAnalysis(withRule120, highRiskPoints);
               });
           }
 

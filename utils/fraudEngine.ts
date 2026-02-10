@@ -344,14 +344,9 @@ export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: n
     // Skip if already scored high (optimization)
     if (score.totalScore >= 80) return score;
 
-    // NEW: Filter for Inconsistent Consumption
-    // Subscriber must exhibit inconsistent behavior to be flagged for geo risk
-    const hasInconsistency = score.breakdown.trendInconsistency > 0 || 
-                             score.inconsistentData.hasWinterDrop || 
-                             score.inconsistentData.isSemesterSuspect ||
-                             score.inconsistentData.volatilityScore > 0;
-    
-    if (!hasInconsistency) return score;
+    // NEW LOGIC: Geo Analysis now specifically targets "120 Rule Suspects"
+    // The user wants to see which subscribers fitting the 120 Rule are ALSO near high risk areas.
+    if (!score.is120RuleSuspect) return score;
 
     let geoScore = score.breakdown.geoRisk;
     const reasons = score.reason ? score.reason.split(', ') : [];
