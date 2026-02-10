@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle } from 'lucide-react';
+import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Rule120TableProps {
   data: RiskScore[];
@@ -19,17 +20,47 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
 
   const visibleData = data.slice(0, visibleCount);
 
+  const handleExport = () => {
+    const exportData = data.map(row => ({
+        "Tesisat No": row.tesisatNo,
+        "Muhatap No": row.muhatapNo,
+        "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+        "Ocak (m3)": row.rule120Data?.jan,
+        "Şubat (m3)": row.rule120Data?.feb,
+        "Mart (m3)": row.rule120Data?.mar,
+        "3 Aylık Toplam": (row.rule120Data?.jan || 0) + (row.rule120Data?.feb || 0) + (row.rule120Data?.mar || 0),
+        "Risk Durumu": "120 Kuralı İhlali (25 < Tüketim < 110)",
+        "Adres": row.address
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "120_Kurali_Analizi");
+    XLSX.writeFile(wb, "120_Kurali_Analiz_Raporu.xlsx");
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden flex flex-col h-full relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
       
       <div className="p-5 border-b border-blue-100 bg-white sticky top-0 z-10 flex justify-between items-center backdrop-blur-xl">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
-          <div className="bg-blue-50 p-1.5 rounded-md border border-blue-200 animate-pulse">
-             <ThermometerSnowflake className="h-5 w-5 text-blue-500" />
-          </div>
-          120 Kuralı Analizi
-        </h3>
+        <div className="flex items-center gap-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
+            <div className="bg-blue-50 p-1.5 rounded-md border border-blue-200 animate-pulse">
+                <ThermometerSnowflake className="h-5 w-5 text-blue-500" />
+            </div>
+            120 Kuralı Analizi
+            </h3>
+            <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-500 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
+                title="Listeyi Excel olarak indir"
+            >
+                <Download className="h-3.5 w-3.5" />
+                Excel İndir
+            </button>
+        </div>
+        
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                 Kriter: 25 &lt; Ocak, Şubat, Mart &lt; 110

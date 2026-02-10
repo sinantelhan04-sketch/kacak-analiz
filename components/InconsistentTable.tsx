@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { TrendingDown, GraduationCap, Filter, AlertOctagon, Activity, ChevronDown } from 'lucide-react';
+import { TrendingDown, GraduationCap, Filter, AlertOctagon, Activity, ChevronDown, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface InconsistentTableProps {
   data: RiskScore[];
@@ -28,17 +29,46 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
 
   const visibleData = filteredData.slice(0, visibleCount);
 
+  const handleExport = () => {
+    const exportData = filteredData.map(row => ({
+        "Tesisat No": row.tesisatNo,
+        "Muhatap No": row.muhatapNo,
+        "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+        "Tutarsızlık Detayı": row.inconsistentData.dropDetails.join(' | '),
+        "Sinyal Türü": row.inconsistentData.isSemesterSuspect && !row.inconsistentData.hasWinterDrop 
+                       ? 'Olası Sömestr' 
+                       : (row.inconsistentData.volatilityScore > 0 ? 'ZigZag (Dalgalı)' : 'Kritik Düşüş'),
+        "Risk Puanı": row.breakdown.trendInconsistency,
+        "Adres": row.address
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tutarsiz_Tuketim");
+    XLSX.writeFile(wb, "Tutarsiz_Tuketim_Raporu.xlsx");
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-pink-200 shadow-sm overflow-hidden flex flex-col h-full relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-pink-500"></div>
       
       <div className="p-5 border-b border-pink-100 bg-white sticky top-0 z-10 flex justify-between items-center backdrop-blur-xl">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
-          <div className="bg-pink-50 p-1.5 rounded-md border border-pink-200">
-             <TrendingDown className="h-5 w-5 text-pink-500" />
-          </div>
-          Tutarsız Kış Tüketimleri
-        </h3>
+        <div className="flex items-center gap-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
+            <div className="bg-pink-50 p-1.5 rounded-md border border-pink-200">
+                <TrendingDown className="h-5 w-5 text-pink-500" />
+            </div>
+            Tutarsız Kış Tüketimleri
+            </h3>
+            <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-pink-300 hover:text-pink-600 text-slate-500 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
+                title="Listeyi Excel olarak indir"
+            >
+                <Download className="h-3.5 w-3.5" />
+                Excel İndir
+            </button>
+        </div>
         
         <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">

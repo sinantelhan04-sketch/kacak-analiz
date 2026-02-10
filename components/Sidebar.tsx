@@ -1,9 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, Activity } from 'lucide-react';
+import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, Activity, BrainCircuit } from 'lucide-react';
 
 interface SidebarProps {
-  currentView: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk';
-  setView: (view: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk') => void;
+  currentView: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report';
+  setView: (view: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report') => void;
   onExport: () => void;
   onReset: () => void;
   level1Count: number;
@@ -13,6 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
   
   const menuItems = [
     { id: 'general', label: 'Genel Bakış', icon: LayoutDashboard },
+    { id: 'ai-report', label: 'Yapay Zeka Raporu', icon: BrainCircuit },
     { id: 'georisk', label: 'Coğrafi Harita', icon: MapPin },
     { id: 'tampering', label: 'Müdahale Analizi', icon: Wrench },
     { id: 'inconsistent', label: 'Tutarsız Tüketim', icon: TrendingDown },
@@ -54,25 +55,28 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
               {menuItems.map((item) => {
                   const isActive = currentView === item.id;
                   const Icon = item.icon;
+                  // @ts-ignore
+                  const itemId = item.id; 
+
                   return (
                       <button
-                          key={item.id}
-                          onClick={() => setView(item.id)}
+                          key={itemId}
+                          onClick={() => setView(itemId)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
                               isActive 
                               ? 'bg-black/5 text-black' 
                               : 'text-slate-500 hover:bg-black/5 hover:text-slate-900'
                           }`}
                       >
-                          <Icon className={`h-4 w-4 ${isActive ? 'text-apple-blue' : 'text-slate-400'}`} />
+                          <Icon className={`h-4 w-4 ${isActive ? 'text-apple-blue' : 'text-slate-400'} ${itemId === 'ai-report' ? 'text-purple-500' : ''}`} />
                           <span>{item.label}</span>
                           
-                          {level1Count > 0 && item.id === 'general' && !isActive && (
+                          {level1Count > 0 && itemId === 'general' && !isActive && (
                               <span className="ml-auto bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                   {level1Count}
                               </span>
                           )}
-                          {isActive && level1Count > 0 && item.id === 'general' && (
+                          {isActive && level1Count > 0 && itemId === 'general' && (
                               <span className="ml-auto bg-apple-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                                   {level1Count}
                               </span>
@@ -94,8 +98,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
                       <Activity className="h-4 w-4 text-accent-green" />
                   </div>
                   <div>
-                    <h5 className="text-slate-900 font-semibold text-xs">Analiz Raporu</h5>
-                    <p className="text-[10px] text-slate-500">Hazır</p>
+                    <h5 className="text-slate-900 font-semibold text-xs">Veri Dışa Aktar</h5>
+                    <p className="text-[10px] text-slate-500">Excel Formatı</p>
                   </div>
               </div>
               <button 

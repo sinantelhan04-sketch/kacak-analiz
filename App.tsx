@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud } from 'lucide-react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -7,18 +7,19 @@ import InconsistentTable from './components/InconsistentTable';
 import Rule120Table from './components/Rule120Table';
 import GeoRiskTable from './components/GeoRiskTable';
 import HotspotPanel from './components/HotspotPanel';
+import AiReportView from './components/AiReportView';
 import Sidebar from './components/Sidebar';
 import DashboardChart from './components/DashboardChart';
 import ExplainerModal from './components/ExplainerModal';
 import { generateDemoData, normalizeId, createBaseRiskScore, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis } from './utils/fraudEngine';
-import { generateExecutiveSummary } from './services/geminiService';
+import { generateComprehensiveReport } from './services/geminiService';
 import { RiskScore, EngineStats, Subscriber, ReferenceLocation, MonthlyData, AnalysisStatus } from './types';
 import * as XLSX from 'xlsx';
 
 const App: React.FC = () => {
   // Stages: setup (upload) -> dashboard (loaded but idle) -> analyzing (processing)
   const [appStage, setAppStage] = useState<'setup' | 'dashboard'>('setup');
-  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk'>('general');
+  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report'>('general');
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
@@ -421,8 +422,13 @@ const App: React.FC = () => {
 
   const handleAiInsights = async () => {
     if (riskData.length === 0) return;
+    
+    // Ensure we switch to AI view to see the report
+    setDashboardView('ai-report');
+    
     setIsGeneratingReport(true);
-    const summary = await generateExecutiveSummary(riskData);
+    // Updated call to comprehensive service
+    const summary = await generateComprehensiveReport(stats, riskData);
     setAiReport(summary);
     setIsGeneratingReport(false);
   };
@@ -639,6 +645,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-4">
                     <h2 className="text-lg font-semibold text-slate-900">
                         {dashboardView === 'general' && 'Genel Bakış'}
+                        {dashboardView === 'ai-report' && 'Yapay Zeka Raporu'}
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
                         {dashboardView === 'tampering' && 'Müdahale Analizi'}
                         {dashboardView === 'inconsistent' && 'Tutarsız Kış Tüketimi'}
@@ -664,15 +671,15 @@ const App: React.FC = () => {
 
                     <button 
                         onClick={handleAiInsights}
-                        disabled={isGeneratingReport || !!aiReport || riskData.length === 0}
+                        disabled={isGeneratingReport || riskData.length === 0}
                         className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full transition-all border ${
                             aiReport 
-                            ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : 'bg-white text-slate-700 border-slate-300 hover:border-apple-blue hover:text-apple-blue disabled:opacity-50'
                         }`}
                     >
                          <BrainCircuit className="h-3.5 w-3.5" />
-                         {isGeneratingReport ? 'Analiz Ediliyor...' : aiReport ? 'Rapor Hazır' : 'AI Analiz'}
+                         {isGeneratingReport ? 'Analiz Ediliyor...' : aiReport ? 'Raporu Aç' : 'AI Analiz'}
                     </button>
                     
                     <div className="w-px h-6 bg-slate-300 mx-1"></div>
@@ -691,11 +698,16 @@ const App: React.FC = () => {
                 {/* GENERAL VIEW (Always shows current state) */}
                 {dashboardView === 'general' && (
                     <div className="animate-slide-up" style={{animationDelay: '0.1s'}}>
+                        {/* Standard Layout */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 h-[400px]">
-                            <div className="lg:col-span-2 h-full">
+                            
+                            {/* CHART */}
+                            <div className="lg:col-span-2 h-full transition-all duration-500 ease-in-out">
                                 <DashboardChart topRisk={filteredRiskData[0] || null} />
                             </div>
-                            <div className="h-full">
+
+                            {/* MAP */}
+                            <div className="h-full lg:col-span-1 transition-all duration-500 ease-in-out">
                                 {analysisStatus.georisk ? (
                                     <HotspotPanel 
                                         riskData={riskData} 
@@ -713,6 +725,19 @@ const App: React.FC = () => {
                          <div className="min-h-[500px]">
                             <RiskTable data={filteredRiskData} />
                          </div>
+                    </div>
+                )}
+
+                {/* AI REPORT VIEW */}
+                {dashboardView === 'ai-report' && (
+                    <div className="h-full animate-slide-up" style={{animationDelay: '0.1s'}}>
+                        <AiReportView 
+                            report={aiReport}
+                            isGenerating={isGeneratingReport}
+                            onGenerate={handleAiInsights}
+                            stats={stats}
+                            riskData={riskData}
+                        />
                     </div>
                 )}
 

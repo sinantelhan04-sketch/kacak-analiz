@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { MapPin, AlertTriangle, Building2, User, ChevronDown } from 'lucide-react';
+import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface GeoRiskTableProps {
   data: RiskScore[];
@@ -19,17 +20,47 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
 
   const visibleData = data.slice(0, visibleCount);
 
+  const handleExport = () => {
+    const exportData = data.map(row => ({
+        "Tesisat No": row.tesisatNo,
+        "Muhatap No": row.muhatapNo,
+        "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+        "Enlem": row.location.lat,
+        "Boylam": row.location.lng,
+        "Ocak (m3)": row.rule120Data?.jan || 0,
+        "Şubat (m3)": row.rule120Data?.feb || 0,
+        "Risk Puanı": row.totalScore,
+        "Detay": row.reason
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cografi_Risk");
+    XLSX.writeFile(wb, "Cografi_Risk_Raporu.xlsx");
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden flex flex-col h-full relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-red-600"></div>
       
       <div className="p-5 border-b border-red-100 bg-white sticky top-0 z-10 flex justify-between items-center backdrop-blur-xl">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
-          <div className="bg-red-50 p-1.5 rounded-md border border-red-200 animate-pulse">
-             <MapPin className="h-5 w-5 text-red-500" />
-          </div>
-          Bölgesel Risk & Düşük Tüketim
-        </h3>
+        <div className="flex items-center gap-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
+            <div className="bg-red-50 p-1.5 rounded-md border border-red-200 animate-pulse">
+                <MapPin className="h-5 w-5 text-red-500" />
+            </div>
+            Bölgesel Risk & Düşük Tüketim
+            </h3>
+            <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-red-300 hover:text-red-600 text-slate-500 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
+                title="Listeyi Excel olarak indir"
+            >
+                <Download className="h-3.5 w-3.5" />
+                Excel İndir
+            </button>
+        </div>
+        
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                 Filtre: Riskli Noktaya Yakın (&lt;10m) & 120 Kuralı
