@@ -32,10 +32,10 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
         </h3>
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Kriter: (Ocak & Şubat &lt; 120) VE (Toplam &gt; 25)
+                Kriter: 25 &lt; Ocak &lt; 121 VE 25 &lt; Şubat &lt; 121
              </span>
              <span className="text-[9px] text-slate-500">
-                "Boş Ev" (Toplam &lt; 25) hariç tutulmuştur.
+                Her iki ay da belirtilen aralıkta olmalı.
              </span>
         </div>
       </div>
@@ -144,7 +144,7 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                 <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                         <p>120 Kuralı kriterine uyan kayıt bulunamadı.</p>
-                        <p className="text-xs text-slate-500 mt-1">Ocak ve Şubat aylarının her ikisi de 120 sm³ altında olanlar listelenir (Toplam &lt; 25 hariç).</p>
+                        <p className="text-xs text-slate-500 mt-1">Ocak ve Şubat aylarının her ikisi de 25 ile 121 sm³ arasında olanlar listelenir.</p>
                     </td>
                 </tr>
             )}

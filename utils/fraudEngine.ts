@@ -233,14 +233,11 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
 
     const jan = score.consumption.jan;
     const feb = score.consumption.feb;
-    const janFebTotal = jan + feb;
     
-    const MAX_LIMIT = 120; // 120 sm3 rule implies 120 limit
-    const VACANT_LIMIT = 25; 
-
-    const isBelowThreshold = (jan < MAX_LIMIT) && (feb < MAX_LIMIT);
-    const isNotVacant = janFebTotal >= VACANT_LIMIT;
-    const is120RuleSuspect = isBelowThreshold && isNotVacant;
+    // NEW LOGIC: 25 < Consumption < 121 for BOTH months
+    const isJanSuspect = jan > 25 && jan < 121;
+    const isFebSuspect = feb > 25 && feb < 121;
+    const is120RuleSuspect = isJanSuspect && isFebSuspect;
 
     const reasons = score.reason ? score.reason.split(', ') : [];
     let anomalyScore = score.breakdown.consumptionAnomaly;
@@ -248,9 +245,11 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     if (is120RuleSuspect) {
         if (!score.is120RuleSuspect) {
             let penalty = 30;
+            // Additional penalty if extremely low but still within range (e.g., closer to 26)
+            const janFebTotal = jan + feb;
             if (janFebTotal < 100) penalty = 45; 
             anomalyScore += penalty;
-            reasons.push('120 Kuralı (Kışın Şüpheli Düşük)');
+            reasons.push('120 Kuralı (Kışın Şüpheli Aralıkta)');
         }
     }
 
@@ -402,8 +401,9 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     };
     if (isCommercial) Object.keys(data).forEach(k => { /* @ts-ignore */ data[k] *= 2.5; });
 
-    if (i === 12) { data.jan = 1; data.feb = 50; data.dec = 150; }
-    if (i === 13) { data.jan = 5; data.feb = 8; data.dec = 150; }
+    // Update demo data to trigger new 120 rule (25 < x < 121)
+    if (i === 12) { data.jan = 35; data.feb = 50; data.dec = 150; }
+    if (i === 13) { data.jan = 115; data.feb = 110; data.dec = 150; }
 
     let muhatapNo = `M-${id}`;
     let tesisatNo = id.toString();
