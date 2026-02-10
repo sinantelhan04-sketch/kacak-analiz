@@ -1,3 +1,4 @@
+
 export interface MonthlyData {
   jan: number;
   feb: number;
@@ -67,6 +68,7 @@ export interface RiskScore {
   rule120Data?: {
       jan: number;
       feb: number;
+      mar: number;
   };
   inconsistentData: {
     hasWinterDrop: boolean; 

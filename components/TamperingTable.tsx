@@ -17,7 +17,9 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const visibleData = data.slice(0, visibleCount);
+  // SORTING LOGIC: Sort by heatingSensitivity ASCENDING (Lowest ratio is most suspicious)
+  const sortedData = [...data].sort((a, b) => a.heatingSensitivity - b.heatingSensitivity);
+  const visibleData = sortedData.slice(0, visibleCount);
 
   return (
     <div className="bg-white rounded-2xl border border-orange-200 shadow-sm overflow-hidden flex flex-col h-full relative">
@@ -32,9 +34,9 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
         </h3>
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Kriter: Kış ≈ Yaz
+                Sıralama: Artış Katsayısı (En Azdan -> En Çoğa)
              </span>
-             <span className="text-[9px] text-slate-500">Mevsimsel fark düşük (Bypass Şüphesi)</span>
+             <span className="text-[9px] text-slate-500">Katsayı ne kadar düşükse bypass şüphesi o kadar yüksektir.</span>
         </div>
       </div>
       

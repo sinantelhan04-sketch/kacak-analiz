@@ -481,7 +481,11 @@ const App: React.FC = () => {
 
   const getTopRiskForView = (view: typeof dashboardView): RiskScore | null => {
       let filtered: RiskScore[] = [];
-      if (view === 'tampering') filtered = filteredRiskData.filter(r => r.isTamperingSuspect);
+      if (view === 'tampering') {
+          filtered = filteredRiskData.filter(r => r.isTamperingSuspect);
+          // Sort ASC for tampering (Lowest ratio is higher risk)
+          filtered.sort((a,b) => a.heatingSensitivity - b.heatingSensitivity);
+      }
       else if (view === 'inconsistent') filtered = filteredRiskData.filter(r => r.inconsistentData.hasWinterDrop || r.inconsistentData.isSemesterSuspect);
       else filtered = filteredRiskData;
       return filtered.length > 0 ? filtered[0] : null;

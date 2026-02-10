@@ -32,10 +32,10 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
         </h3>
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Kriter: 25 &lt; Ocak &lt; 110 VE 25 &lt; Şubat &lt; 110
+                Kriter: 25 &lt; Ocak, Şubat, Mart &lt; 110
              </span>
              <span className="text-[9px] text-slate-500">
-                Her iki ay da belirtilen aralıkta olmalı.
+                Üç ay da (Ocak, Şubat, Mart) belirtilen aralıkta olmalı.
              </span>
         </div>
       </div>
@@ -48,6 +48,7 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
               <th className="px-6 py-4">Abone Tipi</th>
               <th className="px-6 py-4">Ocak (sm³)</th>
               <th className="px-6 py-4">Şubat (sm³)</th>
+              <th className="px-6 py-4">Mart (sm³)</th>
               <th className="px-6 py-4">Durum</th>
               <th className="px-6 py-4">Risk Skoru</th>
             </tr>
@@ -56,7 +57,8 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
             {visibleData.map((row, index) => {
                const jan = row.rule120Data?.jan || 0;
                const feb = row.rule120Data?.feb || 0;
-               const total = jan + feb;
+               const mar = row.rule120Data?.mar || 0;
+               const total = jan + feb + mar;
                
                return (
                 <tr key={row.tesisatNo} 
@@ -100,13 +102,20 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                         </span>
                     </td>
                     <td className="px-6 py-4">
-                        {total < 100 ? (
+                        <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${
+                            mar < 50 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                        }`}>
+                            {mar}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        {total < 150 ? (
                             <div className="flex flex-col">
                                 <span className="text-red-600 text-xs font-bold flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
                                     Çok Kritik
                                 </span>
-                                <span className="text-[9px] text-slate-400">Kışın neredeyse hiç kullanmamış.</span>
+                                <span className="text-[9px] text-slate-400">3 ay toplamı çok düşük.</span>
                             </div>
                         ) : (
                              <div className="flex flex-col">
@@ -131,7 +140,7 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
             })}
             {visibleCount < data.length && (
                 <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center">
+                    <td colSpan={7} className="px-6 py-4 text-center">
                         <button 
                             onClick={handleShowMore}
                             className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
@@ -144,9 +153,9 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
             )}
             {data.length === 0 && (
                 <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                         <p>120 Kuralı kriterine uyan kayıt bulunamadı.</p>
-                        <p className="text-xs text-slate-500 mt-1">Ocak ve Şubat aylarının her ikisi de 25 ile 110 sm³ arasında olanlar listelenir.</p>
+                        <p className="text-xs text-slate-500 mt-1">Ocak, Şubat ve Mart aylarının üçü de 25 ile 110 sm³ arasında olanlar listelenir.</p>
                     </td>
                 </tr>
             )}

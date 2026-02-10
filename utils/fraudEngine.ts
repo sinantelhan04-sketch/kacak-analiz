@@ -234,11 +234,14 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
 
     const jan = score.consumption.jan;
     const feb = score.consumption.feb;
+    const mar = score.consumption.mar;
     
-    // NEW LOGIC: 25 < Consumption < 110 for BOTH months (Updated range)
+    // NEW LOGIC: 25 < Consumption < 110 for THREE months (Jan, Feb, Mar)
     const isJanSuspect = jan > 25 && jan < 110;
     const isFebSuspect = feb > 25 && feb < 110;
-    const is120RuleSuspect = isJanSuspect && isFebSuspect;
+    const isMarSuspect = mar > 25 && mar < 110;
+
+    const is120RuleSuspect = isJanSuspect && isFebSuspect && isMarSuspect;
 
     const reasons = score.reason ? score.reason.split(', ') : [];
     let anomalyScore = score.breakdown.consumptionAnomaly;
@@ -246,18 +249,18 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     if (is120RuleSuspect) {
         if (!score.is120RuleSuspect) {
             let penalty = 30;
-            // Additional penalty if extremely low but still within range (e.g., closer to 26)
-            const janFebTotal = jan + feb;
-            if (janFebTotal < 100) penalty = 45; 
+            // Additional penalty if extremely low total across 3 months
+            const total = jan + feb + mar;
+            if (total < 150) penalty = 45; 
             anomalyScore += penalty;
-            reasons.push('120 Kuralı (Kışın Şüpheli Aralıkta)');
+            reasons.push('120 Kuralı (Ocak-Şubat-Mart Şüpheli)');
         }
     }
 
     return updateTotalScore({
         ...score,
         is120RuleSuspect,
-        rule120Data: { jan, feb },
+        rule120Data: { jan, feb, mar },
         breakdown: { ...score.breakdown, consumptionAnomaly: anomalyScore },
         reason: reasons.join(', ')
     });
@@ -402,11 +405,15 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     };
     if (isCommercial) Object.keys(data).forEach(k => { /* @ts-ignore */ data[k] *= 2.5; });
 
-    // Update demo data to trigger new 120 rule (25 < x < 110)
-    // 35/50 fits the 25-110 range, triggers rule.
-    if (i === 12) { data.jan = 35; data.feb = 50; data.dec = 150; }
-    // 95/100 fits the 25-110 range, triggers rule (previously 115 which was > 110)
-    if (i === 13) { data.jan = 95; data.feb = 100; data.dec = 150; }
+    // Update demo data to trigger new 120 rule (25 < x < 110 for Jan, Feb, Mar)
+    if (i === 12) { 
+        data.jan = 35; data.feb = 50; data.mar = 40; // All in range 25-110
+        data.dec = 150; 
+    }
+    if (i === 13) { 
+        data.jan = 95; data.feb = 100; data.mar = 90; // All in range 25-110
+        data.dec = 150; 
+    }
 
     let muhatapNo = `M-${id}`;
     let tesisatNo = id.toString();
