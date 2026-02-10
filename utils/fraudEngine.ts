@@ -217,12 +217,12 @@ export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
 
 // 3. RULE 120 ANALYSIS
 export const applyRule120Analysis = (score: RiskScore): RiskScore => {
-    // NEW RULE: Only apply 120 rule if subscriber type is EXACTLY "KONUT (KOMBİ)"
-    const requiredType = "KONUT (KOMBİ)";
+    // UPDATED RULE: Apply 120 rule if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
+    const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
     const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
 
     // If type doesn't match, skip this analysis
-    if (rawType !== requiredType) {
+    if (!allowedTypes.includes(rawType)) {
         return score;
     }
 
@@ -432,7 +432,7 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       location: { lat, lng },
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
-      rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : 'KONUT (KOMBİ)', // Matches 120 rule check
+      rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), // Updated for demo to include merkezi
       consumption: data,
       isVacant: false
     });
