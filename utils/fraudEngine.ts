@@ -1,4 +1,4 @@
-import { Subscriber, RiskScore, Hotspot, EngineStats } from '../types';
+import { Subscriber, RiskScore } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
 // Format: [Lat, Lng]
@@ -452,7 +452,7 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       }
     }
     
-    // Updated: Properly typed object iteration for value modification
+    // Typed loop to modify data values
     (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
         data[k] = Math.max(0, Math.floor(data[k] * (0.9 + Math.random() * 0.2)));
     });
@@ -464,7 +464,7 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       location: { lat, lng },
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
-      rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), // Updated for demo to include merkezi
+      rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), 
       consumption: data,
       isVacant: false
     });

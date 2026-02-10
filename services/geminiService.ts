@@ -1,12 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { RiskScore } from "../types";
 
+// Safe access to API key for Vite environment
+const API_KEY = process.env.API_KEY;
+
 export const generateExecutiveSummary = async (topRisks: RiskScore[]): Promise<string> => {
-  if (!process.env.API_KEY) {
+  if (!API_KEY) {
     return "API Anahtarı bulunamadı. Lütfen Gemini özelliklerini kullanmak için ortamı yapılandırın.";
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
   
   // Format the data for the prompt
   const dataSummary = topRisks.slice(0, 5).map(r => 

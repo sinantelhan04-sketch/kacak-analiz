@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Activity, CheckCircle, BrainCircuit, FileSpreadsheet, FileText, FileUp, XCircle, ShieldCheck, Zap, Download, Loader2, PlayCircle, BarChart3, Merge, BookOpen, ChevronRight, UploadCloud, Play } from 'lucide-react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -12,7 +12,7 @@ import DashboardChart from './components/DashboardChart';
 import ExplainerModal from './components/ExplainerModal';
 import { generateDemoData, normalizeId, createBaseRiskScore, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis } from './utils/fraudEngine';
 import { generateExecutiveSummary } from './services/geminiService';
-import { RiskScore, EngineStats, Hotspot, Subscriber, ReferenceLocation, MonthlyData, AnalysisStatus } from './types';
+import { RiskScore, EngineStats, Subscriber, ReferenceLocation, MonthlyData, AnalysisStatus } from './types';
 import * as XLSX from 'xlsx';
 
 const App: React.FC = () => {
