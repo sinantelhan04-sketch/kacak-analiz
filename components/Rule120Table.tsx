@@ -80,7 +80,9 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                                     <User className="h-3 w-3" />
                                 </div>
                             )}
-                            <span className="text-xs font-medium text-slate-600">{row.aboneTipi === 'Commercial' ? 'Ticari' : 'Mesken'}</span>
+                            <span className="text-xs font-medium text-slate-600">
+                                {row.rawAboneTipi || (row.aboneTipi === 'Commercial' ? 'Ticari' : 'Mesken')}
+                            </span>
                         </div>
                     </td>
                     <td className="px-6 py-4">

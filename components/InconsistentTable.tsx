@@ -81,7 +81,9 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
                         </div>
                     </td>
                     <td className="px-6 py-4">
-                       <span className="text-xs font-medium text-slate-600">{row.aboneTipi === 'Commercial' ? 'Ticari' : 'Mesken'}</span>
+                       <span className="text-xs font-medium text-slate-600">
+                          {row.rawAboneTipi || (row.aboneTipi === 'Commercial' ? 'Ticari' : 'Mesken')}
+                       </span>
                     </td>
                     <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">

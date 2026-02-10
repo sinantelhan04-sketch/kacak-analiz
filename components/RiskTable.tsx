@@ -97,7 +97,12 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-medium text-slate-900">{row.tesisatNo}</span>
-                            <span className="text-xs text-slate-500 font-mono">{row.muhatapNo}</span>
+                            <div className="flex flex-col mt-0.5">
+                                <span className="text-xs text-slate-500 font-mono">{row.muhatapNo}</span>
+                                <span className="text-[10px] text-slate-400 font-medium tracking-tight mt-0.5">
+                                    {row.rawAboneTipi || (row.aboneTipi === 'Commercial' ? 'Ticari' : 'Mesken')}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </td>
