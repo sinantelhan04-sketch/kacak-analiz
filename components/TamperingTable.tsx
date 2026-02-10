@@ -17,7 +17,7 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
     setVisibleCount(prev => prev + 50);
   };
 
-  // SORTING LOGIC: Sort by heatingSensitivity ASCENDING (Lowest ratio is most suspicious)
+  // SORTING LOGIC: Sort by heatingSensitivity ASCENDING (Lowest ratio is higher risk)
   const sortedData = [...data].sort((a, b) => a.heatingSensitivity - b.heatingSensitivity);
   const visibleData = sortedData.slice(0, visibleCount);
 
@@ -34,7 +34,7 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
         </h3>
         <div className="flex flex-col text-right">
              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Sıralama: Artış Katsayısı (En Azdan -> En Çoğa)
+                Sıralama: Artış Katsayısı (En Azdan &rarr; En Çoğa)
              </span>
              <span className="text-[9px] text-slate-500">Katsayı ne kadar düşükse bypass şüphesi o kadar yüksektir.</span>
         </div>
