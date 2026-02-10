@@ -325,6 +325,15 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
 
 // 5. GEO RISK ANALYSIS (Heavy)
 export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: number, lng: number}[]): RiskScore => {
+    // UPDATED RULE: Apply geo analysis ONLY if subscriber type is "KONUT (KOMBİ)" OR "KONUT (MERKEZİ)"
+    const allowedTypes = ["KONUT (KOMBİ)", "KONUT (MERKEZİ)"];
+    const rawType = score.rawAboneTipi ? score.rawAboneTipi.toLocaleUpperCase('tr').trim() : '';
+
+    // If type doesn't match, skip this analysis
+    if (!allowedTypes.includes(rawType)) {
+        return score;
+    }
+
     // Skip if no coords
     if (score.location.lat === 0 || nearbyHighRiskPoints.length === 0) return score;
     // Skip if already scored high (optimization)
