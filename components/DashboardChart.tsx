@@ -29,65 +29,71 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
     ];
   }, [topRisk]);
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl ring-1 ring-slate-900/5">
+          <p className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</p>
+          <p className="text-xl font-bold text-slate-800 flex items-center gap-1">
+            {payload[0].value} <span className="text-sm font-medium text-slate-500">m³</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (!topRisk) return (
-      <div className="bg-white rounded-[30px] p-8 border border-slate-200 h-full flex items-center justify-center text-slate-400">
+      <div className="h-full flex items-center justify-center text-slate-400 bg-white/40 backdrop-blur-sm rounded-[32px]">
           Veri Yok
       </div>
   );
 
   return (
-    <div className="bg-white rounded-[30px] p-6 border border-slate-200 shadow-sm h-full flex flex-col">
+    <div className="h-full flex flex-col p-8 bg-white/40 backdrop-blur-sm rounded-[32px]">
       <div className="flex justify-between items-center mb-6 shrink-0">
           <div>
-            <h3 className="text-slate-800 font-bold text-lg">Tüketim Trendi (En Riskli Abone)</h3>
-            <p className="text-slate-500 text-xs">Tesisat: <span className="text-accent-purple font-mono">{topRisk.tesisatNo}</span></p>
+            <h3 className="text-slate-800 font-bold text-xl tracking-tight">Tüketim Trendi (En Riskli Abone)</h3>
+            <p className="text-slate-500 text-xs font-medium mt-1">Tesisat: <span className="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-mono">{topRisk.tesisatNo}</span></p>
           </div>
-          <div className="flex items-center gap-2">
-             <span className="flex items-center gap-1 text-[10px] text-slate-400"><div className="w-2 h-2 rounded-full bg-cyan-500"></div> Tüketim (m³)</span>
+          <div className="flex items-center gap-3 bg-white/50 px-3 py-1.5 rounded-full border border-white/40 shadow-sm">
+             <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]"></div>
+                <span className="text-[11px] font-semibold text-slate-600">Tüketim (m³)</span>
+             </div>
           </div>
       </div>
       
-      {/* 
-          Recharts Fix:
-          1. Parent must have flex-1 and min-h-0 (or min-w-0) to handle flex sizing correctly.
-          2. Immediate wrapper needs absolute inset-0 to fill the flex parent.
-          3. ResponsiveContainer takes 100% of that absolute wrapper.
-          4. Added minWidth={0} to prevent width(-1) error during initial render or transitions.
-      */}
       <div className="flex-1 w-full min-h-0 min-w-0 relative">
         <div className="absolute inset-0 w-full h-full">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <AreaChart
               data={data}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
               <defs>
                 <linearGradient id="colorSm3" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.5}/>
                   <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} strokeOpacity={0.6} />
               <XAxis 
                   dataKey="name" 
-                  stroke="#64748b" 
-                  tick={{fill: '#64748b', fontSize: 12}} 
+                  stroke="#94a3b8" 
+                  tick={{fill: '#64748b', fontSize: 11, fontWeight: 500}} 
                   axisLine={false}
                   tickLine={false}
-                  dy={10}
+                  dy={15}
               />
               <YAxis 
-                  stroke="#64748b" 
-                  tick={{fill: '#64748b', fontSize: 12}} 
+                  stroke="#94a3b8" 
+                  tick={{fill: '#64748b', fontSize: 11, fontWeight: 500}} 
                   axisLine={false}
                   tickLine={false}
                   dx={-10}
               />
-              <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ color: '#0f172a' }}
-                  cursor={{ stroke: '#a855f7', strokeWidth: 1, strokeDasharray: '4 4' }}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Area 
                   type="monotone" 
                   dataKey="sm3" 
@@ -95,6 +101,7 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorSm3)" 
+                  animationDuration={1500}
               />
             </AreaChart>
           </ResponsiveContainer>

@@ -18,9 +18,9 @@
               apple: {
                 gray: '#F5F5F7',
                 blue: '#007AFF',
-                card: '#FFFFFF',
+                card: 'rgba(255, 255, 255, 0.7)',
                 text: '#1D1D1F',
-                border: '#E5E5EA'
+                border: 'rgba(0, 0, 0, 0.05)'
               },
               bg: {
                 main: '#F5F5F7', 
@@ -37,11 +37,21 @@
             },
             boxShadow: {
               'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
-              'apple-hover': '0 8px 32px rgba(0, 0, 0, 0.08)',
+              'apple-hover': '0 12px 32px rgba(0, 0, 0, 0.08)',
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             },
             animation: {
               'spin-slow': 'spin 3s linear infinite',
               'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'blob': 'blob 7s infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              }
             }
           },
         },
@@ -53,13 +63,30 @@
         background-color: #F5F5F7; 
         color: #1D1D1F; 
         -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
       }
       
       /* Apple-style Scrollbar */
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #C7C7CC; border-radius: 99px; border: 2px solid #F5F5F7; }
-      ::-webkit-scrollbar-thumb:hover { background: #8E8E93; }
+      ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+      /* Glassmorphism Utilities */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+      }
 
       /* Custom Animations */
       @keyframes slideUpFade {
