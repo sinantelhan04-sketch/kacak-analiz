@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck, Activity, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Download, Loader2 } from 'lucide-react';
+import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -15,6 +15,8 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
 
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
+    
+    // 1. Hedef elementi seç
     const element = document.getElementById('explainer-content');
     if (!element) {
         setIsDownloading(false);
@@ -22,32 +24,69 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
     }
 
     try {
-        const canvas = await html2canvas(element, {
-            scale: 2, // Higher scale for better quality
+        // 2. Elementi KLONLA
+        const clone = element.cloneNode(true) as HTMLElement;
+
+        // 3. Klonu izole bir kapsayıcıya koy (Ekran dışı ve sabit genişlik)
+        // Masaüstü görünümünü (3 kolonlu grid vs.) korumak için genişliği 1080px yapıyoruz.
+        // Daha sonra bu görüntüyü A4 kağıdına sığacak şekilde küçülteceğiz.
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '-10000px';
+        container.style.left = '0';
+        container.style.zIndex = '-9999';
+        container.style.width = '1080px'; // Masaüstü simülasyonu
+        container.appendChild(clone);
+        document.body.appendChild(container);
+
+        // 4. Klon stillerini PDF için optimize et
+        clone.style.width = '100%';
+        clone.style.height = 'auto';
+        clone.style.maxWidth = 'none'; // Tailwind max-w-4xl kısıtlamasını kaldır
+        clone.style.margin = '0';      // mx-auto ortalamasını kaldır
+        clone.style.padding = '40px';  // Kağıt kenar boşlukları
+        clone.style.backgroundColor = '#F5F5F7'; // Orijinal arka plan rengi
+        clone.style.transform = 'none'; // Animasyon transformlarını sıfırla
+        clone.style.animation = 'none';
+        clone.style.borderRadius = '0';
+        clone.style.overflow = 'visible';
+
+        // 5. html2canvas ile yüksek çözünürlüklü görüntü al
+        const canvas = await html2canvas(clone, {
+            scale: 2, // Retina kalitesi
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#F5F5F7',
+            width: 1080, // Container genişliği
+            windowWidth: 1080 // Media query'lerin masaüstü gibi davranması için
         });
 
+        // Kapsayıcıyı temizle
+        document.body.removeChild(container);
+
+        // 6. PDF Oluştur (A4)
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();   // 210mm
+        const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+        
+        // Görüntüyü A4 genişliğine ölçekle (Aspect Ratio koruyarak)
         const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
         let heightLeft = imgHeight;
         let position = 0;
 
-        // Add first page
+        // İlk sayfa
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
 
-        // Add subsequent pages if content overflows
-        while (heightLeft >= 0) {
-            position = heightLeft - imgHeight;
+        // İçerik tek sayfaya sığmıyorsa yeni sayfalar ekle
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight; // Önceki sayfanın bittiği yerden devam et
             pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'PNG', 0, - (pdfHeight * Math.ceil((imgHeight - heightLeft) / pdfHeight)) , imgWidth, imgHeight);
             heightLeft -= pdfHeight;
         }
 
