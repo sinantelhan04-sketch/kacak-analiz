@@ -139,12 +139,12 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                              <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded">+30 Puan</span>
                         </div>
                         <p className="text-sm text-slate-600 mb-4">
-                            Abone kışın aktif kullanım yapıyor görünmesine rağmen (Min. Tüketim > 30), Yaz ve Kış tüketimi arasında beklenen katlanma gerçekleşmiyorsa <strong>sayaç bypass edilmiş</strong> olabilir.
+                            Abone kışın aktif kullanım yapıyor görünmesine rağmen (Min. Tüketim &gt; 30), Yaz ve Kış tüketimi arasında beklenen katlanma gerçekleşmiyorsa <strong>sayaç bypass edilmiş</strong> olabilir.
                         </p>
                         <div className="bg-slate-900 rounded-xl p-4 text-slate-300 text-xs font-mono overflow-x-auto">
                             <div className="mb-1 text-slate-500">// Formül</div>
                             <div>Isınma_Katsayısı = (Ocak + Şubat + Mart) / (Haziran + Temmuz + Ağustos)</div>
-                            <div className="mt-2 text-orange-400">IF (Kış_Ort > 30) AND (Isınma_Katsayısı &lt; 3.5) THEN "Şüpheli"</div>
+                            <div className="mt-2 text-orange-400">IF (Kış_Ort &gt; 30) AND (Isınma_Katsayısı &lt; 3.5) THEN "Şüpheli"</div>
                         </div>
                     </div>
                 </div>
@@ -193,7 +193,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                             Coğrafi koordinatları (Enlem/Boylam) birebir aynı olan aboneler "Aynı Bina" kabul edilir. Bina içerisindeki tüketim davranışı modellenir.
                         </p>
                         <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 marker:text-indigo-600 marker:font-bold">
-                            <li><strong>Temiz Referans Grubu:</strong> Binada kış aylarında düzenli tüketim yapan (her ay > 25 sm³) komşular belirlenir. En az 8 temiz komşu şartı aranır.</li>
+                            <li><strong>Temiz Referans Grubu:</strong> Binada kış aylarında düzenli tüketim yapan (her ay &gt; 25 sm³) komşular belirlenir. En az 8 temiz komşu şartı aranır.</li>
                             <li><strong>Medyan Hesaplama:</strong> Temiz komşuların kış ortalamasının medyanı (orta noktası) alınır.</li>
                             <li><strong>Sapma Tespiti:</strong> Eğer bir abonenin tüketimi, bina medyanının <strong>%60'ından daha düşükse</strong> şüpheli olarak işaretlenir.</li>
                         </ol>
