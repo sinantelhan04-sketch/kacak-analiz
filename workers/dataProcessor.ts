@@ -1,0 +1,1 @@
+// This file is deprecated. Logic moved to utils/dataLoader.ts to run on main thread.

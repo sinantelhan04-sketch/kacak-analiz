@@ -11,19 +11,23 @@ interface HotspotPanelProps {
   referenceLocations?: ReferenceLocation[];
   selectedDistrict?: string | null;
   onDistrictSelect?: (district: string | null) => void;
-  detectedCity?: string; // NEW
-  availableDistricts?: string[]; // NEW
+  detectedCity?: string;
+  availableDistricts?: string[];
 }
 
-// --- Helper Component for Smooth Zooming ---
-const MapController: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+// --- Helper Component for Smooth Zooming using Bounds ---
+const MapController: React.FC<{ bounds: L.LatLngBoundsExpression | null }> = ({ bounds }) => {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(center, zoom, {
-      duration: 1.5,
-      easeLinearity: 0.25
-    });
-  }, [center, zoom, map]);
+    if (bounds) {
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+        duration: 1.5
+      });
+    }
+  }, [bounds, map]);
   return null;
 };
 
@@ -31,14 +35,6 @@ const MapController: React.FC<{ center: [number, number]; zoom: number }> = ({ c
 const redPulseIcon = L.divIcon({
   className: 'custom-div-icon',
   html: "<div class='radar-dot red'></div>",
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-  popupAnchor: [0, -10]
-});
-
-const orangePulseIcon = L.divIcon({
-  className: 'custom-div-icon',
-  html: "<div class='radar-dot orange'></div>",
   iconSize: [12, 12],
   iconAnchor: [6, 6],
   popupAnchor: [0, -10]
@@ -53,71 +49,61 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
     availableDistricts = []
 }) => {
   
-  // MERGE DATA: Show Reference Locations AND High Risk (Level 1) detected items
-  const points = useMemo(() => {
+  // 1. Points to Render: Show ONLY Reference Locations (Known Fraud)
+  const renderPoints = useMemo(() => {
     const combined = [];
-    
-    // 1. Reference Locations (Known Fraud)
     referenceLocations.forEach(r => {
         if(r.lat !== 0 && r.lng !== 0) {
             combined.push({ ...r, type: 'Reference', score: 100 });
         }
     });
-
-    // 2. High Risk Calculated Items (Level 1 only to avoid clutter)
-    riskData.forEach(r => {
-        if (r.totalScore >= 80 && r.location.lat !== 0 && r.location.lng !== 0) {
-            combined.push({
-                id: r.tesisatNo,
-                lat: r.location.lat,
-                lng: r.location.lng,
-                type: 'Detected',
-                score: r.totalScore,
-                reason: r.reason
-            });
-        }
-    });
-
     return combined;
-  }, [referenceLocations, riskData]);
+  }, [referenceLocations]);
 
-  // Calculate Center Logic
-  const { center, zoomLevel } = useMemo(() => {
-    // 1. If a district is selected and it is in our Istanbul polygons (legacy support), zoom there.
-    // Otherwise, if a district is selected but no polygon, just center on points in that district.
+  // 2. Calculate Map Bounds based on Selection
+  const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
+    let pointsToFit: {lat: number, lng: number}[] = [];
+
+    // If a district is selected
     if (selectedDistrict) {
-        if (ISTANBUL_DISTRICTS[selectedDistrict]) {
-            const poly = ISTANBUL_DISTRICTS[selectedDistrict];
-            const latSum = poly.reduce((acc, p) => acc + p[0], 0);
-            const lngSum = poly.reduce((acc, p) => acc + p[1], 0);
-            return { 
-                center: [latSum / poly.length, lngSum / poly.length] as [number, number], 
-                zoomLevel: 13 
-            };
-        }
-        
-        // Dynamic district center calculation
+        // A. Try to find points in riskData belonging to this district 
+        // (We use riskData for geography even if we don't render them all, to get accurate district bounds)
         const districtPoints = riskData.filter(r => r.district === selectedDistrict && r.location.lat !== 0);
+        
         if (districtPoints.length > 0) {
-            const latSum = districtPoints.reduce((acc, p) => acc + p.location.lat, 0);
-            const lngSum = districtPoints.reduce((acc, p) => acc + p.location.lng, 0);
-            return {
-                center: [latSum / districtPoints.length, lngSum / districtPoints.length] as [number, number],
-                zoomLevel: 13
-            };
+            pointsToFit = districtPoints.map(d => d.location);
+        } 
+        // B. Fallback: If it's a known Istanbul district polygon
+        else if (ISTANBUL_DISTRICTS[selectedDistrict]) {
+             const poly = ISTANBUL_DISTRICTS[selectedDistrict];
+             return L.latLngBounds(poly); // Return polygon bounds directly
         }
+    } else {
+        // If NO district selected (City View), fit to all data points (References + Risks)
+        // to show the full extent of the city
+        const allRisks = riskData.filter(r => r.location.lat !== 0).map(r => r.location);
+        const allRefs = referenceLocations.filter(r => r.lat !== 0).map(r => ({lat: r.lat, lng: r.lng}));
+        pointsToFit = [...allRisks, ...allRefs];
     }
 
-    if (points.length === 0) return { center: [41.015, 28.978] as [number, number], zoomLevel: 10 };
-    
-    // Default: Center of all points
-    const latSum = points.reduce((acc, p) => acc + p.lat, 0);
-    const lngSum = points.reduce((acc, p) => acc + p.lng, 0);
-    return { 
-        center: [latSum / points.length, lngSum / points.length] as [number, number], 
-        zoomLevel: 10 
-    };
-  }, [points, selectedDistrict, riskData]);
+    // Default fallback if no data
+    if (pointsToFit.length === 0) {
+        // Default Istanbul view
+        return [[40.8, 28.6], [41.2, 29.4]];
+    }
+
+    // Calculate Min/Max for bounds
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    pointsToFit.forEach(p => {
+        if (p.lat < minLat) minLat = p.lat;
+        if (p.lat > maxLat) maxLat = p.lat;
+        if (p.lng < minLng) minLng = p.lng;
+        if (p.lng > maxLng) maxLng = p.lng;
+    });
+
+    return [[minLat, minLng], [maxLat, maxLng]];
+  }, [selectedDistrict, riskData, referenceLocations]);
+
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
@@ -188,8 +174,9 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
       {/* Map Content Area */}
       <div className="flex-1 w-full relative bg-slate-50 z-0">
          <MapContainer 
-            center={center} 
-            zoom={zoomLevel} 
+            // Default center, will be overridden by MapController
+            center={[41.0082, 28.9784]} 
+            zoom={10} 
             scrollWheelZoom={true} 
             style={{ height: '100%', width: '100%' }}
             attributionControl={false}
@@ -200,7 +187,7 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                 url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             />
             
-            <MapController center={center} zoom={zoomLevel} />
+            <MapController bounds={mapBounds} />
 
             {/* Render Districts - ONLY IF ISTANBUL (Because we only have polygons for Istanbul) */}
             {isIstanbul && Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
@@ -238,26 +225,23 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                 )
             })}
             
-            {/* Render Points */}
-            {points.map((p, i) => {
-                const isReference = p.type === 'Reference';
-                const icon = isReference ? redPulseIcon : orangePulseIcon;
-                
+            {/* Render Points - ONLY REFERENCE POINTS */}
+            {renderPoints.map((p, i) => {
                 return (
                     <Marker 
                         key={`${p.type}-${i}`} 
                         position={[p.lat, p.lng]} 
-                        icon={icon}
+                        icon={redPulseIcon}
                     >
                         <Popup className="custom-popup" closeButton={false}>
                             <div className="p-0.5 min-w-[180px]">
-                                <div className={`flex items-center gap-2 mb-2 pb-2 border-b ${isReference ? 'border-red-100' : 'border-orange-100'}`}>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isReference ? 'bg-red-100' : 'bg-orange-100'}`}>
-                                        {isReference ? <AlertOctagon className="h-3.5 w-3.5 text-red-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-orange-600" />}
+                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-red-100">
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100">
+                                        <AlertOctagon className="h-3.5 w-3.5 text-red-600" />
                                     </div>
                                     <div>
                                         <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">
-                                            {isReference ? 'Referans Kayıt' : 'Tespit Edilen Risk'}
+                                            Referans Kayıt
                                         </div>
                                         <div className="font-bold text-slate-800 text-xs leading-none mt-0.5">{p.id}</div>
                                     </div>
@@ -268,12 +252,6 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                                         <MapPin className="h-3 w-3 text-slate-400" />
                                         <span className="font-mono">{p.lat.toFixed(5)}, {p.lng.toFixed(5)}</span>
                                     </div>
-                                    
-                                    {!isReference && (p as any).reason && (
-                                         <div className="text-[10px] text-orange-600 bg-orange-50 p-1.5 rounded border border-orange-100 font-medium leading-snug">
-                                            {(p as any).reason}
-                                         </div>
-                                    )}
                                 </div>
                             </div>
                         </Popup>
@@ -293,19 +271,6 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                      <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-slate-700">Referans Noktası</span>
                         <span className="text-[9px] text-slate-400">Sabıkalı / Kara Liste</span>
-                     </div>
-                 </div>
-                 
-                 <div className="w-full h-px bg-slate-100"></div>
-
-                 <div className="flex items-center gap-3">
-                     <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500 border border-white box-content"></span>
-                     </span>
-                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-700">Yüksek Risk</span>
-                        <span className="text-[9px] text-slate-400">Seviye 1 Tespit</span>
                      </div>
                  </div>
              </div>

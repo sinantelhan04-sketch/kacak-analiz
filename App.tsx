@@ -1,25 +1,28 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X } from 'lucide-react';
+
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2 } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
 import InconsistentTable from './components/InconsistentTable';
 import Rule120Table from './components/Rule120Table';
 import GeoRiskTable from './components/GeoRiskTable';
+import BuildingAnalysisTable from './components/BuildingAnalysisTable';
 import HotspotPanel from './components/HotspotPanel';
 import AiReportView from './components/AiReportView';
 import Sidebar from './components/Sidebar';
 import DashboardChart from './components/DashboardChart';
 import ExplainerModal from './components/ExplainerModal';
-import { generateDemoData, normalizeId, createBaseRiskScore, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis } from './utils/fraudEngine';
+import { generateDemoData, createBaseRiskScore, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis, analyzeBuildingConsumption } from './utils/fraudEngine';
 import { generateComprehensiveReport } from './services/geminiService';
-import { RiskScore, EngineStats, Subscriber, ReferenceLocation, MonthlyData, AnalysisStatus } from './types';
+import { RiskScore, EngineStats, Subscriber, ReferenceLocation, AnalysisStatus, BuildingRisk } from './types';
 import * as XLSX from 'xlsx';
+import { processFiles } from './utils/dataLoader';
 
 const App: React.FC = () => {
   // Stages: setup (upload) -> dashboard (loaded but idle) -> analyzing (processing)
   const [appStage, setAppStage] = useState<'setup' | 'dashboard'>('setup');
-  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report'>('general');
+  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building'>('general');
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
@@ -29,6 +32,7 @@ const App: React.FC = () => {
 
   // ANALYSIS RESULT STATE
   const [riskData, setRiskData] = useState<RiskScore[]>([]);
+  const [buildingRiskData, setBuildingRiskData] = useState<BuildingRisk[]>([]); // New State for Building Module
   const [stats, setStats] = useState<EngineStats>({ totalScanned: 0, level1Count: 0, level2Count: 0, level3Count: 0 });
   const [detectedCity, setDetectedCity] = useState<string>('İSTANBUL');
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
@@ -39,7 +43,8 @@ const App: React.FC = () => {
       tampering: false,
       inconsistent: false,
       rule120: false,
-      georisk: false
+      georisk: false,
+      buildingAnomaly: false
   });
   const [runningAnalysis, setRunningAnalysis] = useState<string | null>(null);
 
@@ -64,321 +69,130 @@ const App: React.FC = () => {
   // Ref to store actual File objects for processing
   const fileObjects = useRef<{a: File | null, b: File | null}>({ a: null, b: null });
 
-  // --- SMART FILE READER (Same as before) ---
-  const readWorkbook = async (file: File): Promise<XLSX.WorkBook> => {
-    const buffer = await file.arrayBuffer();
-    if (file.name.toLowerCase().endsWith('.csv')) {
-        const uint8Array = new Uint8Array(buffer);
-        if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
-             const text = new TextDecoder('utf-8').decode(buffer);
-             return XLSX.read(text, { type: 'string', dense: true });
-        }
-        try {
-             const text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-             return XLSX.read(text, { type: 'string', dense: true });
-        } catch(e) {
-             const text = new TextDecoder('windows-1254').decode(buffer);
-             return XLSX.read(text, { type: 'string', dense: true });
-        }
-    }
-    return XLSX.read(buffer, { dense: true });
-  };
-
-  // --- CHARACTER NORMALIZATION HELPER ---
-  const normalizeTrChars = (str: string) => {
-      if (!str) return "";
-      return String(str).toLocaleLowerCase('tr')
-          .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i')
-          .replace(/i/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-          .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
-          .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
-          .replace(/[^a-z0-9]/g, '');
-  };
-
-  // --- OPTIMIZED HELPER: Column Index Finder ---
-  const getColIndex = (headers: any[], candidates: string[]): number => {
-      if (!headers || !Array.isArray(headers)) return -1;
-      const normalizedCandidates = candidates.map(c => normalizeTrChars(c));
-      for (let i = 0; i < headers.length; i++) {
-          const h = normalizeTrChars(String(headers[i]));
-          if (normalizedCandidates.some(c => h.includes(c) || h === c)) return i;
-      }
-      return -1;
-  };
-
-  const normalizeRowData = (row: any[]): any[] => {
-      if (row.length === 1 && typeof row[0] === 'string') {
-          if (row[0].includes(',')) return row[0].split(',');
-          if (row[0].includes(';')) return row[0].split(';');
-          if (row[0].includes('\t')) return row[0].split('\t');
-      }
-      return row;
-  };
-
-  const getMonthKey = (val: any): keyof MonthlyData | null => {
-        if (!val) return null;
-        let s = String(val).trim();
-        if (/^0?1(\.0)?$/.test(s)) return 'jan';
-        if (/^0?2(\.0)?$/.test(s)) return 'feb';
-        if (/^0?3(\.0)?$/.test(s)) return 'mar';
-        if (/^0?4(\.0)?$/.test(s)) return 'apr';
-        if (/^0?5(\.0)?$/.test(s)) return 'may';
-        if (/^0?6(\.0)?$/.test(s)) return 'jun';
-        if (/^0?7(\.0)?$/.test(s)) return 'jul';
-        if (/^0?8(\.0)?$/.test(s)) return 'aug';
-        if (/^0?9(\.0)?$/.test(s)) return 'sep';
-        if (/^10(\.0)?$/.test(s)) return 'oct';
-        if (/^11(\.0)?$/.test(s)) return 'nov';
-        if (/^12(\.0)?$/.test(s)) return 'dec';
-        s = normalizeTrChars(s);
-        if (s.includes('oca') || s.includes('jan')) return 'jan';
-        if (s.includes('sub') || s.includes('feb')) return 'feb';
-        if (s.includes('mar')) return 'mar';
-        if (s.includes('nis') || s.includes('apr')) return 'apr';
-        if (s.includes('may')) return 'may';
-        if (s.includes('haz') || s.includes('jun')) return 'jun';
-        if (s.includes('tem') || s.includes('jul')) return 'jul';
-        if (s.includes('agu') || s.includes('aug')) return 'aug';
-        if (s.includes('eyl') || s.includes('sep')) return 'sep';
-        if (s.includes('eki') || s.includes('oct')) return 'oct';
-        if (s.includes('kas') || s.includes('nov')) return 'nov';
-        if (s.includes('ara') || s.includes('dec')) return 'dec';
-        return null;
-  }
-
-  const cleanVal = (val: any): string => {
-      if (val === null || val === undefined) return '';
-      let str = String(val).trim();
-      str = str.replace(/['"]/g, '');
-      if (str.endsWith('.0')) str = str.slice(0, -2);
-      return str;
-  };
-
-  const parseNum = (val: any): number => {
-      if (val === null || val === undefined) return 0;
-      if (typeof val === 'number') return val;
-      if (typeof val === 'string') {
-          let s = val.trim().replace(/['"]/g, '');
-          if (s === '') return 0;
-          if (s.includes(',') && !s.includes('.')) s = s.replace(',', '.');
-          return parseFloat(s) || 0;
-      }
-      return 0;
-  };
-
-  // --- FILE PARSING ---
-  const processUploadedFiles = async (onProgress: (pct: number) => void): Promise<{ subscribers: Subscriber[], refMuhatapIds: Set<string>, refTesisatIds: Set<string>, refLocations: ReferenceLocation[], rawCount: number }> => {
-    const fileA = fileObjects.current.a;
-    const fileB = fileObjects.current.b;
-    if (!fileA || !fileB) throw new Error("Dosyalar eksik.");
-
-    onProgress(10);
-    const wbA = await readWorkbook(fileA);
-    const sheetA = wbA.Sheets[wbA.SheetNames[0]];
-    const rawDataA = XLSX.utils.sheet_to_json<any[]>(sheetA, { header: 1 });
-    
-    const refMuhatapIds = new Set<string>();
-    const refTesisatIds = new Set<string>();
-    const refLocations: ReferenceLocation[] = [];
-
-    if(rawDataA.length > 1) {
-         const headersA = normalizeRowData(rawDataA[0]);
-         const idxRefTesisat = getColIndex(headersA, ['tesisat', 'tesisatno', 'tesisat no']);
-         const idxRefMuhatap = getColIndex(headersA, ['muhatap', 'muhatapno', 'muhatap no']);
-         const idxRefLat = getColIndex(headersA, ['enlem', 'lat', 'latitude']);
-         const idxRefLng = getColIndex(headersA, ['boylam', 'lng', 'long', 'longitude']);
-         
-         for(let i=1; i<rawDataA.length; i++){
-             const row = normalizeRowData(rawDataA[i]);
-             if(idxRefTesisat !== -1 && row[idxRefTesisat]) {
-                 const tesisatId = normalizeId(row[idxRefTesisat]);
-                 refTesisatIds.add(tesisatId);
-                 if (idxRefLat !== -1 && idxRefLng !== -1) {
-                    const lat = parseNum(row[idxRefLat]);
-                    const lng = parseNum(row[idxRefLng]);
-                    if (lat !== 0 && lng !== 0) {
-                        refLocations.push({ id: cleanVal(row[idxRefTesisat]), lat, lng, type: 'Reference' });
-                    }
-                 }
-             }
-             if(idxRefMuhatap !== -1 && row[idxRefMuhatap]) {
-                 refMuhatapIds.add(normalizeId(row[idxRefMuhatap]));
-             }
-         }
-    }
-    
-    onProgress(30);
-    const wbB = await readWorkbook(fileB);
-    const subscriberMap = new Map<string, Subscriber>();
-    let totalRows = 0;
-
-    for (const sheetName of wbB.SheetNames) {
-        const sheet = wbB.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
-        if(rows.length < 2) continue;
-        const headers = normalizeRowData(rows[0]);
-        const idxId = getColIndex(headers, ['tesisat no', 'tesisat', 'tesisatno']);
-        const idxMuhatap = getColIndex(headers, ['muhatap no', 'muhatap', 'muhatapno']);
-        const idxType = getColIndex(headers, ['abone tipi', 'tip', 'abone', 'abonetipi']);
-        const idxLat = getColIndex(headers, ['enlem', 'lat', 'latitude']);
-        const idxLng = getColIndex(headers, ['boylam', 'lng', 'long', 'longitude']);
-        const idxCity = getColIndex(headers, ['il', 'sehir', 'city', 'vilayet']); // NEW
-        const idxDistrict = getColIndex(headers, ['ilce', 'district', 'bolge']); // NEW
-        const idxMonth = getColIndex(headers, ['ay', 'month', 'donem']);
-        const idxCons = getColIndex(headers, ['sm3', 'tuketim', 'm3', 'sarfiyat']);
-        
-        const wideFormatMap: Partial<Record<keyof MonthlyData, number>> = {};
-        if (idxMonth === -1 || idxCons === -1) {
-            headers.forEach((h, i) => {
-                const key = getMonthKey(h);
-                if (key) wideFormatMap[key] = i;
-            });
-        }
-        
-        if(idxId === -1) continue;
-
-        for(let i=1; i<rows.length; i++){
-            const row = normalizeRowData(rows[i]);
-            const rawId = cleanVal(row[idxId]);
-            if(!rawId) continue;
-            const id = normalizeId(rawId); 
-            totalRows++;
-
-            if(!subscriberMap.has(id)){
-                const rawTypeStr = idxType !== -1 ? String(row[idxType]) : 'Mesken';
-                let typeStr = rawTypeStr.toLowerCase();
-                const isCommercial = typeStr.includes('ticar') || typeStr.includes('resmi') || typeStr.includes('sanayi');
-                const initMuhatap = idxMuhatap !== -1 ? cleanVal(row[idxMuhatap]) : `M-${rawId}`;
-
-                subscriberMap.set(id, {
-                    tesisatNo: rawId, muhatapNo: initMuhatap, relatedMuhatapNos: [initMuhatap],
-                    address: '', 
-                    location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
-                    city: idxCity !== -1 ? cleanVal(row[idxCity]) : '',
-                    district: idxDistrict !== -1 ? cleanVal(row[idxDistrict]) : '',
-                    aboneTipi: isCommercial ? 'Commercial' : 'Residential',
-                    rawAboneTipi: rawTypeStr,
-                    consumption: {jan:0, feb:0, mar:0, apr:0, may:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0},
-                    isVacant: false
-                });
-            }
-            const sub = subscriberMap.get(id)!;
-            if (idxMuhatap !== -1) {
-                const currentMuhatap = cleanVal(row[idxMuhatap]);
-                if (currentMuhatap) {
-                     const normCurrent = normalizeId(currentMuhatap);
-                     const exists = sub.relatedMuhatapNos.some(m => normalizeId(m) === normCurrent);
-                     if (!exists) sub.relatedMuhatapNos.push(currentMuhatap);
-                }
-            }
-            if(idxMonth !== -1 && idxCons !== -1) {
-                const monthKey = getMonthKey(row[idxMonth]);
-                if (monthKey) sub.consumption[monthKey] = parseNum(row[idxCons]);
-            } else {
-                 (Object.keys(wideFormatMap) as Array<keyof MonthlyData>).forEach(mKey => {
-                     const colIdx = wideFormatMap[mKey];
-                     if (colIdx !== undefined && row[colIdx] !== undefined) sub.consumption[mKey] = parseNum(row[colIdx]);
-                 });
-            }
-        }
-    }
-    const subscribers = Array.from(subscriberMap.values());
-    onProgress(100);
-    return { subscribers, refMuhatapIds, refTesisatIds, refLocations, rawCount: totalRows };
-  };
-
   // --- STAGE 1: LOAD DATA & INITIALIZE BASE SCORES ---
   const handleLoadData = async () => {
     setValidationError(null);
     setLoadingProgress(0);
-    setLoadingStatusText("Dosyalar Okunuyor...");
+    setLoadingStatusText("Hazırlanıyor...");
     setDuplicateInfo(null);
-    setIsReadingFile('a'); 
-    setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false });
+    setIsReadingFile('a'); // Just to show activity spinner
+    setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false });
+    setBuildingRiskData([]);
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Check if files are present
+    if (!fileObjects.current.a || !fileObjects.current.b) {
+        // Fallback to Demo Data if files missing
+        if (!fileObjects.current.a && !fileObjects.current.b) {
+             loadDemoData();
+             return;
+        }
+        setValidationError("Lütfen her iki dosyayı da yükleyiniz.");
+        setIsReadingFile(null);
+        return;
+    }
 
+    // --- MAIN THREAD PROCESSING ---
+    setLoadingStatusText("Veriler okunuyor...");
+    
     try {
-        let subs: Subscriber[] = [];
-        let rM: Set<string> = new Set();
-        let rT: Set<string> = new Set();
-        let rLocs: ReferenceLocation[] = [];
-        let totalRows = 0;
-
-        if (files.a && files.b && fileObjects.current.a && fileObjects.current.b) {
-            const data = await processUploadedFiles((pct) => setLoadingProgress(pct));
-            subs = data.subscribers;
-            rM = data.refMuhatapIds;
-            rT = data.refTesisatIds;
-            rLocs = data.refLocations;
-            totalRows = data.rawCount;
-        } else {
-            setLoadingProgress(50);
-            const data = generateDemoData();
-            subs = data.subscribers;
-            rM = data.fraudMuhatapIds;
-            rT = data.fraudTesisatIds;
-            rLocs = subs.filter(s => data.fraudTesisatIds.has(s.tesisatNo) || s.relatedMuhatapNos.some(m => data.fraudMuhatapIds.has(m))).map(s => ({
-                id: s.tesisatNo, lat: s.location.lat, lng: s.location.lng, type: 'Reference' as const
-            }));
-            totalRows = 500;
-        }
-
-        setLoadingProgress(80);
-        setLoadingStatusText("Temel Veri Seti Oluşturuluyor...");
-        
-        // --- 1. RUN BASE ANALYSIS (Includes Reference Check) ---
-        // This is fast enough to do on load
-        let initialRisks = subs.map((sub) => createBaseRiskScore(sub, rM, rT));
-        
-        // Sort by initial score (Reference matches will be on top)
-        initialRisks.sort((a,b) => b.totalScore - a.totalScore);
-
-        // DETECT CITY AND DISTRICTS
-        const cityCounts: Record<string, number> = {};
-        const districtSet = new Set<string>();
-
-        initialRisks.forEach(r => {
-             if (r.city && r.city.trim()) {
-                 const c = r.city.toLocaleUpperCase('tr');
-                 cityCounts[c] = (cityCounts[c] || 0) + 1;
-             }
-             if (r.district && r.district.trim()) {
-                 districtSet.add(r.district.toLocaleUpperCase('tr'));
-             }
-        });
-
-        // Find most frequent city
-        let bestCity = 'İSTANBUL';
-        let maxCount = 0;
-        for (const [c, count] of Object.entries(cityCounts)) {
-            if (count > maxCount) {
-                maxCount = count;
-                bestCity = c;
+        const result = await processFiles(
+            fileObjects.current.a, 
+            fileObjects.current.b,
+            (progress, status) => {
+                setLoadingProgress(progress);
+                setLoadingStatusText(status);
             }
-        }
+        );
         
-        setDetectedCity(bestCity);
-        setAvailableDistricts(Array.from(districtSet).sort());
-        setRawSubscribers(subs);
-        setRefMuhatapIds(rM);
-        setRefTesisatIds(rT);
-        setRefLocations(rLocs); 
-        setRiskData(initialRisks);
-        updateStats(initialRisks);
-        
-        setAnalysisStatus(prev => ({ ...prev, reference: true }));
-        setDuplicateInfo({ totalRows, uniqueSubs: subs.length });
+        finalizeDataLoad(result);
 
-        setLoadingProgress(100);
-        setAppStage('dashboard'); 
-
-    } catch (error: any) {
-        console.error(error);
-        setValidationError(error.message || "Yükleme sırasında hata oluştu.");
-    } finally {
+    } catch (err: any) {
+        console.error("Processing Error:", err);
+        setValidationError("Veri işleme sırasında hata oluştu: " + (err.message || "Bilinmeyen hata"));
+        setLoadingProgress(0);
         setIsReadingFile(null);
     }
+  };
+
+  const loadDemoData = async () => {
+      setLoadingProgress(10);
+      setLoadingStatusText("Demo verisi oluşturuluyor...");
+      
+      // Simulate delay for effect
+      await new Promise(r => setTimeout(r, 800));
+      setLoadingProgress(50);
+      
+      const data = generateDemoData();
+      const refLocs = data.subscribers
+          .filter(s => data.fraudTesisatIds.has(s.tesisatNo) || s.relatedMuhatapNos.some(m => data.fraudMuhatapIds.has(m)))
+          .map(s => ({
+              id: s.tesisatNo, lat: s.location.lat, lng: s.location.lng, type: 'Reference' as const
+          }));
+          
+      finalizeDataLoad({
+          subscribers: data.subscribers,
+          refMuhatapIds: data.fraudMuhatapIds,
+          refTesisatIds: data.fraudTesisatIds,
+          refLocations: refLocs,
+          rawCount: 500
+      });
+  };
+
+  const finalizeDataLoad = (data: { 
+      subscribers: Subscriber[], 
+      refMuhatapIds: Set<string>, 
+      refTesisatIds: Set<string>, 
+      refLocations: ReferenceLocation[],
+      rawCount: number
+  }) => {
+      setLoadingProgress(95);
+      setLoadingStatusText("Risk analizleri tamamlanıyor...");
+
+      // --- RUN BASE ANALYSIS (Main Thread - Fast enough for scored data) ---
+      const initialRisks = data.subscribers.map((sub) => createBaseRiskScore(sub, data.refMuhatapIds, data.refTesisatIds));
+      
+      // Sort by initial score
+      initialRisks.sort((a,b) => b.totalScore - a.totalScore);
+
+      // DETECT CITY AND DISTRICTS
+      const cityCounts: Record<string, number> = {};
+      const districtSet = new Set<string>();
+
+      initialRisks.forEach(r => {
+            if (r.city && r.city.trim()) {
+                const c = r.city.toLocaleUpperCase('tr');
+                cityCounts[c] = (cityCounts[c] || 0) + 1;
+            }
+            if (r.district && r.district.trim()) {
+                districtSet.add(r.district.toLocaleUpperCase('tr'));
+            }
+      });
+
+      let bestCity = 'İSTANBUL';
+      let maxCount = 0;
+      for (const [c, count] of Object.entries(cityCounts)) {
+          if (count > maxCount) {
+              maxCount = count;
+              bestCity = c;
+          }
+      }
+      
+      setDetectedCity(bestCity);
+      setAvailableDistricts(Array.from(districtSet).sort());
+      
+      setRawSubscribers(data.subscribers);
+      setRefMuhatapIds(data.refMuhatapIds);
+      setRefTesisatIds(data.refTesisatIds);
+      setRefLocations(data.refLocations); 
+      setRiskData(initialRisks);
+      updateStats(initialRisks);
+      
+      setAnalysisStatus(prev => ({ ...prev, reference: true }));
+      setDuplicateInfo({ totalRows: data.rawCount, uniqueSubs: data.subscribers.length });
+
+      setLoadingProgress(100);
+      setAppStage('dashboard'); 
+      setIsReadingFile(null);
   };
 
   // --- ON-DEMAND ANALYSIS RUNNER ---
@@ -389,6 +203,15 @@ const App: React.FC = () => {
       
       // Allow UI to render loading state
       await new Promise(r => setTimeout(r, 100));
+
+      // Separate logic for Building Anomaly since it returns a different type
+      if (module === 'buildingAnomaly') {
+          const results = analyzeBuildingConsumption(rawSubscribers);
+          setBuildingRiskData(results);
+          setAnalysisStatus(prev => ({ ...prev, buildingAnomaly: true }));
+          setRunningAnalysis(null);
+          return;
+      }
 
       setRiskData(prevData => {
           let updatedData = [...prevData];
@@ -441,9 +264,10 @@ const App: React.FC = () => {
       setRiskData([]);
       setRawSubscribers([]);
       setRefLocations([]);
+      setBuildingRiskData([]);
       setStats({ totalScanned: 0, level1Count: 0, level2Count: 0, level3Count: 0 });
       setAiReport('');
-      setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false });
+      setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false });
       setFiles({ a: null, b: null });
       setDuplicateInfo(null);
       setAvailableDistricts([]);
@@ -456,12 +280,8 @@ const App: React.FC = () => {
 
   const handleAiInsights = async () => {
     if (riskData.length === 0) return;
-    
-    // Ensure we switch to AI view to see the report
     setDashboardView('ai-report');
-    
     setIsGeneratingReport(true);
-    // Updated call to comprehensive service
     const summary = await generateComprehensiveReport(stats, riskData);
     setAiReport(summary);
     setIsGeneratingReport(false);
@@ -489,29 +309,11 @@ const App: React.FC = () => {
     setValidationError(null);
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      setIsReadingFile(type);
-      await new Promise(r => setTimeout(r, 50));
-      try {
-        const workbook = await readWorkbook(file);
-        if (type === 'a') {
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
-            if (json.length === 0) throw new Error("Referans dosyası boş.");
-            fileObjects.current.a = file;
-        } else {
-             if (workbook.SheetNames.length === 0) throw new Error("Dosya boş.");
-             fileObjects.current.b = file;
-        }
-        setFiles(prev => ({ ...prev, [type]: file.name }));
-      } catch (err: any) {
-        setValidationError(err.message || "Dosya okunamadı.");
-        e.target.value = ""; 
-        setFiles(prev => ({ ...prev, [type]: null }));
-        if (type === 'a') fileObjects.current.a = null;
-        else fileObjects.current.b = null;
-      } finally {
-        setIsReadingFile(null);
-      }
+      // Only set file object and name, do NOT read here
+      if (type === 'a') fileObjects.current.a = file;
+      else fileObjects.current.b = file;
+      
+      setFiles(prev => ({ ...prev, [type]: file.name }));
     }
   };
   
@@ -525,7 +327,6 @@ const App: React.FC = () => {
       let filtered: RiskScore[] = [];
       if (view === 'tampering') {
           filtered = filteredRiskData.filter(r => r.isTamperingSuspect);
-          // Sort ASC for tampering (Lowest ratio is higher risk)
           filtered.sort((a,b) => a.heatingSensitivity - b.heatingSensitivity);
       }
       else if (view === 'inconsistent') filtered = filteredRiskData.filter(r => r.inconsistentData.hasWinterDrop || r.inconsistentData.isSemesterSuspect);
@@ -597,49 +398,35 @@ const App: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-10">
                     <div 
-                        onClick={() => !isReadingFile && fileInputRefA.current?.click()}
+                        onClick={() => fileInputRefA.current?.click()}
                         className={`group relative h-64 bg-white rounded-[24px] border border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center
-                        ${files.a ? 'border-green-400 bg-green-50/30' : 'border-slate-300 hover:border-apple-blue hover:shadow-apple-hover'}
-                        ${isReadingFile === 'a' ? 'opacity-80 pointer-events-none' : ''}`}
+                        ${files.a ? 'border-green-400 bg-green-50/30' : 'border-slate-300 hover:border-apple-blue hover:shadow-apple-hover'}`}
                     >
                         <input type="file" ref={fileInputRefA} onChange={(e) => handleFileSelect('a', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        {isReadingFile === 'a' ? (
-                            <Loader2 className="h-10 w-10 text-slate-400 animate-spin" />
-                        ) : (
-                            <>
-                                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${files.a ? 'bg-green-100' : 'bg-slate-50 group-hover:bg-blue-50'}`}>
-                                    {files.a ? <CheckCircle className="h-8 w-8 text-green-600" /> : <UploadCloud className="h-8 w-8 text-slate-400 group-hover:text-apple-blue" />}
-                                </div>
-                                <h3 className="font-semibold text-slate-900 mb-1">Referans Liste (Sabıkalı)</h3>
-                                <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.a ? files.a : 'Tesisat/Muhatap, Konum, Kara Liste...'}</p>
-                            </>
-                        )}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${files.a ? 'bg-green-100' : 'bg-slate-50 group-hover:bg-blue-50'}`}>
+                            {files.a ? <CheckCircle className="h-8 w-8 text-green-600" /> : <UploadCloud className="h-8 w-8 text-slate-400 group-hover:text-apple-blue" />}
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Referans Liste (Sabıkalı)</h3>
+                        <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.a ? files.a : 'Tesisat/Muhatap, Konum, Kara Liste...'}</p>
                     </div>
 
                     <div 
-                        onClick={() => !isReadingFile && fileInputRefB.current?.click()}
+                        onClick={() => fileInputRefB.current?.click()}
                         className={`group relative h-64 bg-white rounded-[24px] border border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center
-                        ${files.b ? 'border-green-400 bg-green-50/30' : 'border-slate-300 hover:border-apple-blue hover:shadow-apple-hover'}
-                        ${isReadingFile === 'b' ? 'opacity-80 pointer-events-none' : ''}`}
+                        ${files.b ? 'border-green-400 bg-green-50/30' : 'border-slate-300 hover:border-apple-blue hover:shadow-apple-hover'}`}
                     >
                         <input type="file" ref={fileInputRefB} onChange={(e) => handleFileSelect('b', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        {isReadingFile === 'b' ? (
-                            <Loader2 className="h-10 w-10 text-slate-400 animate-spin" />
-                        ) : (
-                            <>
-                                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${files.b ? 'bg-green-100' : 'bg-slate-50 group-hover:bg-blue-50'}`}>
-                                    {files.b ? <CheckCircle className="h-8 w-8 text-green-600" /> : <FileSpreadsheet className="h-8 w-8 text-slate-400 group-hover:text-apple-blue" />}
-                                </div>
-                                <h3 className="font-semibold text-slate-900 mb-1">Hedef Liste (Tüketim)</h3>
-                                <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.b ? files.b : 'Tesisat, Muhatap, Abone Tipi, Ay, Sm3, İl, İlçe...'}</p>
-                            </>
-                        )}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${files.b ? 'bg-green-100' : 'bg-slate-50 group-hover:bg-blue-50'}`}>
+                            {files.b ? <CheckCircle className="h-8 w-8 text-green-600" /> : <FileSpreadsheet className="h-8 w-8 text-slate-400 group-hover:text-apple-blue" />}
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Hedef Liste (Tüketim)</h3>
+                        <p className="text-sm text-slate-500 max-w-[200px] text-center">{files.b ? files.b : 'Tesisat, Muhatap, Abone Tipi, Ay, Sm3, İl, İlçe...'}</p>
                     </div>
                 </div>
 
-                {loadingProgress > 0 && loadingProgress < 100 && (
+                {loadingProgress > 0 && (
                      <div className="w-full max-w-md mb-8">
                         <div className="flex justify-between text-xs font-medium text-slate-500 mb-2">
                              <span>{loadingStatusText}</span>
@@ -683,6 +470,7 @@ const App: React.FC = () => {
                         {dashboardView === 'general' && 'Genel Bakış'}
                         {dashboardView === 'ai-report' && 'Yapay Zeka Raporu'}
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
+                        {dashboardView === 'building' && 'Bina Tüketimi (Komşu Analizi)'}
                         {dashboardView === 'tampering' && 'Müdahale Analizi'}
                         {dashboardView === 'inconsistent' && 'Tutarsız Kış Tüketimi'}
                         {dashboardView === 'rule120' && '120 sm³ Kuralı'}
@@ -806,6 +594,25 @@ const App: React.FC = () => {
                                         <GeoRiskTable data={filteredRiskData.filter(r => r.breakdown.geoRisk > 0)} />
                                 </div>
                             </>
+                        )}
+                    </div>
+                )}
+
+                {/* BUILDING ANALYSIS VIEW (NEW) */}
+                {dashboardView === 'building' && (
+                    <div className="h-full animate-slide-up" style={{animationDelay: '0.1s'}}>
+                        {!analysisStatus.buildingAnomaly ? (
+                             <AnalysisStarter 
+                                title="Bina Tüketim Analizi"
+                                desc="Aynı binada oturan (aynı koordinat) en az 4 komşunun kış tüketim medyanını hesaplar ve bu ortalamadan %60 sapan daireleri listeler."
+                                icon={Building2}
+                                color="bg-indigo-500"
+                                moduleName="buildingAnomaly"
+                             />
+                        ) : (
+                            <div className="h-full pb-8">
+                                <BuildingAnalysisTable data={buildingRiskData} />
+                            </div>
                         )}
                     </div>
                 )}

@@ -37,7 +37,7 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
 
   return (
     <div className="bg-white rounded-[30px] p-6 border border-slate-200 shadow-sm h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 shrink-0">
           <div>
             <h3 className="text-slate-800 font-bold text-lg">Tüketim Trendi (En Riskli Abone)</h3>
             <p className="text-slate-500 text-xs">Tesisat: <span className="text-accent-purple font-mono">{topRisk.tesisatNo}</span></p>
@@ -47,49 +47,57 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
           </div>
       </div>
       
-      <div className="flex-1 w-full min-h-[250px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="colorSm3" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis 
-                dataKey="name" 
-                stroke="#64748b" 
-                tick={{fill: '#64748b', fontSize: 12}} 
-                axisLine={false}
-                tickLine={false}
-                dy={10}
-            />
-            <YAxis 
-                stroke="#64748b" 
-                tick={{fill: '#64748b', fontSize: 12}} 
-                axisLine={false}
-                tickLine={false}
-                dx={-10}
-            />
-            <Tooltip 
-                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                itemStyle={{ color: '#0f172a' }}
-                cursor={{ stroke: '#a855f7', strokeWidth: 1, strokeDasharray: '4 4' }}
-            />
-            <Area 
-                type="monotone" 
-                dataKey="sm3" 
-                stroke="#06b6d4" 
-                strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorSm3)" 
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      {/* 
+          Fix for Recharts "width(-1) and height(-1)" error:
+          Using a relative container with flex-1 and putting ResponsiveContainer 
+          inside an absolute div ensures it gets the correct calculated dimensions 
+          even during flex layout passes.
+      */}
+      <div className="flex-1 w-full relative min-h-[200px]">
+        <div className="absolute inset-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="colorSm3" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis 
+                  dataKey="name" 
+                  stroke="#64748b" 
+                  tick={{fill: '#64748b', fontSize: 12}} 
+                  axisLine={false}
+                  tickLine={false}
+                  dy={10}
+              />
+              <YAxis 
+                  stroke="#64748b" 
+                  tick={{fill: '#64748b', fontSize: 12}} 
+                  axisLine={false}
+                  tickLine={false}
+                  dx={-10}
+              />
+              <Tooltip 
+                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                  itemStyle={{ color: '#0f172a' }}
+                  cursor={{ stroke: '#a855f7', strokeWidth: 1, strokeDasharray: '4 4' }}
+              />
+              <Area 
+                  type="monotone" 
+                  dataKey="sm3" 
+                  stroke="#06b6d4" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorSm3)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

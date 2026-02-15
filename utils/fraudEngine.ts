@@ -1,4 +1,4 @@
-import { Subscriber, RiskScore } from '../types';
+import { Subscriber, RiskScore, BuildingRisk } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
 // Format: [Lat, Lng]
@@ -82,6 +82,14 @@ const getStandardDeviation = (array: number[]) => {
   return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
 };
 
+const calculateMedian = (values: number[]): number => {
+    if (values.length === 0) return 0;
+    values.sort((a, b) => a - b);
+    const half = Math.floor(values.length / 2);
+    if (values.length % 2) return values[half];
+    return (values[half - 1] + values[half]) / 2.0;
+};
+
 const calculateTrendSlope = (values: number[]) => {
     const n = values.length;
     if (n < 2) return 0;
@@ -127,13 +135,107 @@ const updateTotalScore = (score: RiskScore): RiskScore => {
 
 // --- MODULAR ANALYSIS FUNCTIONS ---
 
+// NEW: Building Consumption Analysis
+export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingRisk[] => {
+    // 1. Filtre: Sadece "Konut" (Kombi veya Merkezi)
+    const validSubscribers = subscribers.filter(s => {
+        const type = s.rawAboneTipi ? s.rawAboneTipi.toLocaleLowerCase('tr') : '';
+        return type.includes('konut') && (type.includes('kombi') || type.includes('merkezi'));
+    });
+
+    // 2. Gruplama: Enlem ve Boylam TAMAMEN aynı olanlar (Noktadan sonraki tüm basamaklar dahil)
+    const buildingMap = new Map<string, Subscriber[]>();
+    
+    validSubscribers.forEach(sub => {
+        // Lat/Lng kontrolü: 0 veya boş (undefined/null) değerler atlanmalı.
+        // Excel parsing sırasında boş hücreler 0 olarak dönebilir, bu yüzden 0 kontrolü de şart.
+        if (!sub.location.lat || !sub.location.lng || sub.location.lat === 0 || sub.location.lng === 0) return;
+
+        // Sayısal değerin string karşılığını kullanarak tam eşleşme yapıyoruz.
+        // Bu sayede excel'den gelen tüm basamak hassasiyeti korunur (Floating point precision).
+        const key = `${sub.location.lat}_${sub.location.lng}`;
+        
+        if (!buildingMap.has(key)) buildingMap.set(key, []);
+        buildingMap.get(key)!.push(sub);
+    });
+
+    const buildingRisks: BuildingRisk[] = [];
+
+    // 3. Her bina grubunu incele
+    buildingMap.forEach((subs, key) => {
+        
+        // --- ADIM 2: "Temiz Abone" Filtresi ---
+        // Ocak, Şubat ve Mart aylarının HEPSİNDE tüketim > 25 sm³ olmalı.
+        // (Bu aynı zamanda 0 olanları da eler)
+        const cleanSubscribers = subs.filter(s => {
+            const j = s.consumption.jan;
+            const f = s.consumption.feb;
+            const m = s.consumption.mar;
+            return j > 25 && f > 25 && m > 25;
+        });
+
+        // --- ADIM 3: Grup Büyüklüğü Kuralı ---
+        // Referans alınacak "temiz" komşu sayısı en az 8 olmalı.
+        if (cleanSubscribers.length < 8) return;
+
+        // Referans Medyanı (Sadece temiz abonelerden)
+        const cleanWinterAvgs = cleanSubscribers.map(s => (s.consumption.jan + s.consumption.feb + s.consumption.mar) / 3);
+        const buildingMedian = calculateMedian(cleanWinterAvgs);
+        
+        // Sıfıra bölme hatası önlemi
+        if (buildingMedian < 1) return;
+
+        // --- ADIM 4: Şüpheli Tespiti (Tüm bina sakinleri taranır) ---
+        subs.forEach(s => {
+            const jan = s.consumption.jan;
+            const feb = s.consumption.feb;
+            const mar = s.consumption.mar;
+            
+            const personalAvg = (jan + feb + mar) / 3;
+
+            // Kriter 1: Kendi ortalaması 25 ile 110 arasında olmalı
+            const isInRiskRange = personalAvg > 25 && personalAvg < 110;
+
+            // Kriter 2: Bina medyanının %60'ından küçük olmalı
+            const isSignificantlyLow = personalAvg < (buildingMedian * 0.60);
+
+            // Kriter 3: Hiçbir ay 0 olmamalı (Tamamen kapalı/boş daireleri elemek için)
+            const isNonZero = jan > 0 && feb > 0 && mar > 0;
+
+            if (isInRiskRange && isSignificantlyLow && isNonZero) {
+                
+                // Sapma Yüzdesi (Negatif değer çıkacaktır)
+                // Örn: Abone=40, Medyan=100 -> Fark=-60 -> Sapma %-60
+                const deviation = ((personalAvg - buildingMedian) / buildingMedian) * 100;
+
+                buildingRisks.push({
+                    tesisatNo: s.tesisatNo,
+                    aboneTipi: s.rawAboneTipi || s.aboneTipi,
+                    location: s.location,
+                    personalWinterAvg: parseFloat(personalAvg.toFixed(1)),
+                    buildingWinterMedian: parseFloat(buildingMedian.toFixed(1)),
+                    deviationPercentage: parseFloat(deviation.toFixed(1)),
+                    monthlyData: { jan, feb, mar },
+                    neighborCount: cleanSubscribers.length // Referans alınan temiz komşu sayısı
+                });
+            }
+        });
+    });
+
+    // Sıralama: Sapma yüzdesine göre (En küçükten büyüğe, yani en negatiften pozitife doğru)
+    // Örn: -80%, -70%, -60% ...
+    buildingRisks.sort((a, b) => a.deviationPercentage - b.deviationPercentage);
+
+    return buildingRisks;
+};
+
 // 1. BASE INITIALIZATION (With Reference Check)
 export const createBaseRiskScore = (
     sub: Subscriber, 
     fraudMuhatapIds: Set<string>,
     fraudTesisatIds: Set<string>
 ): RiskScore => {
-    // 1. Try to use explicit district from Excel. 2. Fallback to geometric check.
+    // 1. 1. Try to use explicit district from Excel. 2. Fallback to geometric check.
     let district = sub.district;
     if (!district || district.trim() === '') {
         district = identifyDistrictGeometric(sub.location.lat, sub.location.lng);
@@ -398,7 +500,13 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     const isFraud = i < 60; 
     const isCommercial = Math.random() < 0.15;
     const district = districtNames[i % districtNames.length];
-    const { lat, lng } = getRandomPointInDistrict(district);
+    
+    // Make sure some people live in the same building for demo purposes
+    // Every 5th person shares location with 4th person
+    let loc = getRandomPointInDistrict(district);
+    if (i > 5 && i % 5 !== 0) {
+        loc = subscribers[i-1].location;
+    }
 
     let data = {
       jan: 300, feb: 280, mar: 200, apr: 100, may: 50, jun: 20,
@@ -446,8 +554,8 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       tesisatNo: tesisatNo,
       muhatapNo: muhatapNo,
       relatedMuhatapNos: relatedMuhatapNos,
-      address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-      location: { lat, lng },
+      address: `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`,
+      location: loc,
       city: 'İSTANBUL', // Demo data is istanbul
       district: district,
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',

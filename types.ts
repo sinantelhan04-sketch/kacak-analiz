@@ -1,4 +1,5 @@
 
+
 export interface MonthlyData {
   jan: number;
   feb: number;
@@ -81,6 +82,18 @@ export interface RiskScore {
   };
 }
 
+// NEW: Interface for Building Consumption Analysis
+export interface BuildingRisk {
+  tesisatNo: string;
+  aboneTipi: string;
+  location: { lat: number, lng: number };
+  personalWinterAvg: number;
+  buildingWinterMedian: number;
+  deviationPercentage: number; // (personal - median) / median * 100 (will be negative)
+  monthlyData: { jan: number, feb: number, mar: number };
+  neighborCount: number; // How many neighbors in the building
+}
+
 export interface Hotspot {
   street: string; // Can be used as Region ID
   count: number;
@@ -101,4 +114,5 @@ export interface AnalysisStatus {
   inconsistent: boolean;
   rule120: boolean;
   georisk: boolean;
+  buildingAnomaly: boolean; // NEW flag
 }
