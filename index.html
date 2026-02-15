@@ -12,38 +12,28 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
             },
             colors: {
-              apple: {
-                gray: '#F5F5F7',
-                blue: '#007AFF',
-                red: '#FF3B30',
-                green: '#34C759',
-                orange: '#FF9500',
-                purple: '#AF52DE',
-                pink: '#FF2D55',
-                indigo: '#5856D6',
-                yellow: '#FFCC00',
-                card: 'rgba(255, 255, 255, 0.72)',
-                border: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            boxShadow: {
-              'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
-              'apple-hover': '0 12px 32px rgba(0, 0, 0, 0.08)',
-              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
-            },
-            animation: {
-              'spin-slow': 'spin 3s linear infinite',
-              'blob': 'blob 10s infinite',
-            },
-            keyframes: {
-              blob: {
-                '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              // Standard professional palette
+              slate: {
+                50: '#f8fafc',
+                100: '#f1f5f9',
+                200: '#e2e8f0',
+                300: '#cbd5e1',
+                400: '#94a3b8',
+                500: '#64748b',
+                600: '#475569',
+                700: '#334155',
+                800: '#1e293b',
+                900: '#0f172a',
+              },
+              primary: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
               }
             }
           },
@@ -52,58 +42,26 @@
     </script>
     <style>
       body { 
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-        background-color: #F5F5F7; 
-        color: #1D1D1F; 
+        background-color: #f8fafc; 
+        color: #0f172a; 
         -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
       }
       
-      /* Apple-style Scrollbar */
-      ::-webkit-scrollbar { width: 0px; background: transparent; } /* Hidden scrollbar for cleaner look */
-      .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+      /* Clean Scrollbar */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-      /* Glassmorphism Utilities */
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-      }
-      
-      .glass-card {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-      }
-
-      /* Animations */
-      @keyframes slideUpFade {
-        from { opacity: 0; transform: translateY(20px) scale(0.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      .animate-slide-up {
-        animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-      
-      .table-row-animate {
-        opacity: 0;
-        animation: slideUpFade 0.4s ease-out forwards;
-      }
-
-      /* Leaflet Customization */
+      /* Map Styles */
       .leaflet-container {
         width: 100%; height: 100%;
-        background: #F2F2F7;
-        border-radius: 1.5rem;
-        outline: none;
+        background: #f1f5f9;
+        border-radius: 0.75rem;
+        z-index: 0;
       }
       
+      /* Radar Dot for Map (Static Pulse) */
       .radar-dot {
         position: relative;
         width: 12px; height: 12px;
@@ -111,14 +69,24 @@
         background-color: currentColor;
         box-shadow: 0 0 0 2px white;
       }
+      
+      /* Optimized Animation: Only runs on the small dot, not the whole page */
       .radar-dot::after {
-        content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
-        transform: translate(-50%, -50%); border-radius: 50%; background-color: inherit;
-        opacity: 0.6; animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: -1;
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 100%; height: 100%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background-color: inherit;
+        opacity: 0.6;
+        animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        z-index: -1;
       }
+
       @keyframes radar-ping {
         0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-        75%, 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        75%, 100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
       }
     </style>
   <script type="importmap">

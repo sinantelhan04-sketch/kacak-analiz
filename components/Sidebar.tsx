@@ -22,36 +22,32 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
   ] as const;
 
   return (
-    <div className="w-72 h-screen flex flex-col sticky top-0 z-50">
-      {/* Enhanced Glassmorphism Background */}
-      <div className="absolute inset-0 bg-white/70 backdrop-blur-2xl border-r border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"></div>
+    <div className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col sticky top-0 z-50">
       
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="flex flex-col h-full">
         {/* Logo Area */}
-        <div className="h-24 flex items-center px-6 shrink-0">
-          <div className="flex items-center gap-3 group cursor-default">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#007AFF] to-[#0A84FF] rounded-[10px] shadow-lg shadow-blue-500/30 flex items-center justify-center transition-transform group-hover:scale-105">
-              <ShieldCheck className="h-5 w-5 text-white" />
+        <div className="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <ShieldCheck className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold text-lg text-[#1D1D1F] tracking-tight">Kaçak<span className="text-apple-blue">Kontrol</span></span>
+            <span className="font-bold text-lg text-slate-800 tracking-tight">Kaçak<span className="text-primary-600">Kontrol</span></span>
           </div>
         </div>
 
         {/* Navigation Section */}
-        <div className="px-4 flex-1 overflow-y-auto custom-scrollbar py-2 space-y-6">
+        <div className="px-3 flex-1 overflow-y-auto custom-scrollbar py-6 space-y-4">
           
           <button 
               onClick={onReset}
-              className="w-full flex items-center gap-3 bg-white/80 hover:bg-white text-slate-600 px-3 py-3 rounded-2xl border border-white/60 hover:border-white shadow-sm hover:shadow-md transition-all group"
+              className="w-full flex items-center gap-3 bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-2.5 rounded-lg border border-slate-200 transition-colors"
           >
-              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                <RefreshCw className="h-4 w-4 text-slate-500 group-hover:rotate-180 transition-transform duration-700" />
-              </div>
-              <span className="font-medium text-sm text-[#1D1D1F]">Yeniden Yükle</span>
+              <RefreshCw className="h-4 w-4 text-slate-500" />
+              <span className="font-semibold text-sm">Yeniden Yükle</span>
           </button>
 
           <div>
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-3 px-3">Ana Menü</div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">Ana Menü</div>
               
               <div className="space-y-1">
                   {menuItems.map((item) => {
@@ -64,14 +60,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
                           <button
                               key={itemId}
                               onClick={() => setView(itemId)}
-                              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 group overflow-hidden ${
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                   isActive 
-                                  ? 'bg-[#007AFF] text-white shadow-md shadow-blue-500/30' 
-                                  : 'text-slate-600 hover:bg-black/5 hover:text-black'
+                                  ? 'bg-primary-50 text-primary-700' 
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                               }`}
                           >
-                              <Icon className={`h-4.5 w-4.5 transition-colors stroke-[2px] ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                              <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
+                              <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-primary-600' : 'text-slate-400'}`} />
+                              <span>{item.label}</span>
                               
                               {level1Count > 0 && itemId === 'general' && !isActive && (
                                   <span className="ml-auto bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
@@ -79,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
                                   </span>
                               )}
                               {isActive && level1Count > 0 && itemId === 'general' && (
-                                  <span className="ml-auto bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  <span className="ml-auto bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                                       {level1Count}
                                   </span>
                               )}
@@ -91,25 +87,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-4 shrink-0">
+        <div className="p-4 border-t border-slate-100">
           <div 
               onClick={onExport}
-              className="glass-card rounded-[24px] p-5 border border-white/60 hover:bg-white transition-all cursor-pointer group shadow-sm hover:shadow-apple-hover"
+              className="bg-slate-50 rounded-xl p-4 border border-slate-200 cursor-pointer hover:border-primary-300 transition-all group"
           >
               <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[#34C759]/10 flex items-center justify-center border border-[#34C759]/20 group-hover:scale-110 transition-transform">
-                      <Activity className="h-5 w-5 text-[#34C759]" />
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center border border-green-200">
+                      <Activity className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
-                    <h5 className="text-[#1D1D1F] font-semibold text-sm">Veri Dışa Aktar</h5>
-                    <p className="text-[10px] text-slate-500 font-medium">Excel Formatı (.xlsx)</p>
+                    <h5 className="text-slate-800 font-bold text-sm">Rapor Al</h5>
+                    <p className="text-[10px] text-slate-500">Excel (.xlsx)</p>
                   </div>
               </div>
               <button 
-                  className="w-full bg-[#1D1D1F] text-white text-xs font-bold py-2.5 rounded-xl transition-all hover:bg-black shadow-lg shadow-black/10 flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
               >
-                  <Download className="h-3.5 w-3.5" />
-                  Raporu İndir
+                  <Download className="h-3 w-3" />
+                  İndir
               </button>
           </div>
         </div>
