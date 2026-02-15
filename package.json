@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@google/genai": "^1.40.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.454.0",

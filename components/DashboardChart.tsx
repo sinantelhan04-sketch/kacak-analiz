@@ -52,10 +52,11 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
           1. Parent must have flex-1 and min-h-0 (or min-w-0) to handle flex sizing correctly.
           2. Immediate wrapper needs absolute inset-0 to fill the flex parent.
           3. ResponsiveContainer takes 100% of that absolute wrapper.
+          4. Added minWidth={0} to prevent width(-1) error during initial render or transitions.
       */}
-      <div className="flex-1 w-full min-h-0 relative">
+      <div className="flex-1 w-full min-h-0 min-w-0 relative">
         <div className="absolute inset-0 w-full h-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}

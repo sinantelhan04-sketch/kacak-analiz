@@ -1,5 +1,7 @@
-import React from 'react';
-import { X, ShieldCheck, Activity, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ShieldCheck, Activity, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Download, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface ExplainerModalProps {
   isOpen: boolean;
@@ -7,7 +9,56 @@ interface ExplainerModalProps {
 }
 
 const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    const element = document.getElementById('explainer-content');
+    if (!element) {
+        setIsDownloading(false);
+        return;
+    }
+
+    try {
+        const canvas = await html2canvas(element, {
+            scale: 2, // Higher scale for better quality
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        // Add first page
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        // Add subsequent pages if content overflows
+        while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+
+        pdf.save('Kacak_Analiz_Algoritma_Dokumani.pdf');
+    } catch (error) {
+        console.error('PDF oluşturma hatası:', error);
+        alert('PDF oluşturulurken bir hata oluştu.');
+    } finally {
+        setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -29,18 +80,30 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
             </h2>
             <p className="text-sm text-slate-500 mt-1">Sistemin kaçak tespitinde kullandığı istatistiksel modeller ve risk kriterleri.</p>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${isDownloading ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                title="PDF Olarak İndir"
+            >
+                {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isDownloading ? 'Hazırlanıyor...' : 'PDF İndir'}
+            </button>
+            <button 
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+            >
+                <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto p-0 custom-scrollbar bg-[#F5F5F7]">
           
-          <div className="max-w-4xl mx-auto py-8 px-6 space-y-8">
+          {/* Capture Target for PDF */}
+          <div id="explainer-content" className="max-w-4xl mx-auto py-8 px-6 space-y-8 bg-[#F5F5F7]">
             
             {/* 1. Risk Scoring Overview */}
             <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-200/60">
