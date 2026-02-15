@@ -43,18 +43,18 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
             <p className="text-slate-500 text-xs">Tesisat: <span className="text-accent-purple font-mono">{topRisk.tesisatNo}</span></p>
           </div>
           <div className="flex items-center gap-2">
-             <span className="flex items-center gap-1 text-[10px] text-slate-400"><div className="w-2 h-2 rounded-full bg-accent-cyan"></div> Tüketim (m³)</span>
+             <span className="flex items-center gap-1 text-[10px] text-slate-400"><div className="w-2 h-2 rounded-full bg-cyan-500"></div> Tüketim (m³)</span>
           </div>
       </div>
       
       {/* 
-          Fix for Recharts "width(-1) and height(-1)" error:
-          Using a relative container with flex-1 and putting ResponsiveContainer 
-          inside an absolute div ensures it gets the correct calculated dimensions 
-          even during flex layout passes.
+          Recharts Fix:
+          1. Parent must have flex-1 and min-h-0 (or min-w-0) to handle flex sizing correctly.
+          2. Immediate wrapper needs absolute inset-0 to fill the flex parent.
+          3. ResponsiveContainer takes 100% of that absolute wrapper.
       */}
-      <div className="flex-1 w-full relative min-h-[200px]">
-        <div className="absolute inset-0">
+      <div className="flex-1 w-full min-h-0 relative">
+        <div className="absolute inset-0 w-full h-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
