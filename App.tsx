@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight } from 'lucide-react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight, Command } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -342,16 +342,16 @@ const App: React.FC = () => {
       moduleName 
   }: { title: string, desc: string, icon: any, color: string, moduleName: keyof AnalysisStatus }) => (
       <div className="h-full flex flex-col items-center justify-center glass-panel rounded-[30px] p-8 text-center animate-slide-up hover:shadow-apple-hover transition-all duration-500">
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 ${color} bg-opacity-10 backdrop-blur-sm border border-white/50 shadow-inner`}>
+          <div className={`w-20 h-20 rounded-[22px] flex items-center justify-center mb-6 ${color} bg-opacity-10 backdrop-blur-sm shadow-sm`}>
               <Icon className={`h-10 w-10 ${color.replace('bg-', 'text-')}`} />
           </div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-3 tracking-tight">{title}</h2>
-          <p className="text-slate-500 max-w-md mb-8 text-lg leading-relaxed">{desc}</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">{title}</h2>
+          <p className="text-slate-500 max-w-sm mb-8 text-base leading-relaxed">{desc}</p>
           <button 
               onClick={() => handleRunModuleAnalysis(moduleName)}
               disabled={!!runningAnalysis}
-              className={`px-8 py-4 rounded-full font-bold text-white shadow-xl transform transition-all hover:scale-105 active:scale-95 flex items-center gap-3
-                  ${color.replace('bg-', 'bg-').replace('text-', '')} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+              className={`px-8 py-3.5 rounded-full font-semibold text-white shadow-lg shadow-blue-500/20 transform transition-all hover:scale-105 active:scale-95 flex items-center gap-2
+                  bg-apple-blue hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
           >
               {runningAnalysis === moduleName ? (
                   <>
@@ -369,14 +369,13 @@ const App: React.FC = () => {
   // --- VIEW RENDER ---
   if (appStage === 'setup') {
      return (
-        <div className="min-h-screen bg-[#F5F5F7] text-slate-900 flex flex-col relative overflow-hidden font-sans items-center justify-center">
+        <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col relative overflow-hidden font-sans items-center justify-center">
             
             {/* Animated Mesh Background */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-40 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-yellow-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-                <div className="absolute bottom-[-20%] left-[20%] w-[500px] h-[500px] bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-                <div className="absolute bottom-[-20%] right-[20%] w-[500px] h-[500px] bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-3000"></div>
+                <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+                <div className="absolute bottom-[-20%] left-[20%] w-[500px] h-[500px] bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
             </div>
 
             <div className="flex flex-col items-center justify-center min-h-[70vh] animate-slide-up relative z-10 w-full max-w-5xl px-6">
@@ -393,61 +392,59 @@ const App: React.FC = () => {
                 
                 <div className="text-center mb-16 relative">
                      <div className="flex items-center justify-center gap-3 mb-6">
-                        <div className="bg-apple-blue rounded-3xl p-4 shadow-xl shadow-blue-500/20 backdrop-blur-md bg-opacity-90">
-                            <ShieldCheck className="h-12 w-12 text-white" />
+                        <div className="bg-white rounded-3xl p-5 shadow-2xl shadow-blue-500/10">
+                            <ShieldCheck className="h-12 w-12 text-apple-blue" />
                         </div>
                     </div>
-                    <h1 className="font-bold text-5xl tracking-tight text-slate-900 mb-4 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                        Kaçak<span className="text-apple-blue">Kontrol</span> AI
+                    <h1 className="font-semibold text-5xl tracking-tight text-slate-900 mb-4">
+                        Kaçak<span className="text-apple-blue">Kontrol</span> Pro
                     </h1>
-                    <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed font-medium">
-                        Yeni nesil yapay zeka destekli dolandırıcılık tespit ve analiz platformu. Veri setlerinizi yükleyin, riskleri saniyeler içinde görün.
+                    <p className="text-slate-500 text-xl max-w-xl mx-auto leading-relaxed font-normal">
+                        Yeni nesil yapay zeka destekli dolandırıcılık tespit platformu.
                     </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-12">
                     <div 
                         onClick={() => fileInputRefA.current?.click()}
-                        className={`group relative h-72 glass-card rounded-[32px] border-2 border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center overflow-hidden
-                        ${files.a ? 'border-green-400 bg-green-50/50' : 'border-slate-200 hover:border-apple-blue hover:shadow-2xl hover:-translate-y-1'}`}
+                        className={`group relative h-72 glass-card rounded-[32px] transition-all duration-300 cursor-pointer flex flex-col items-center justify-center overflow-hidden border border-white/60
+                        ${files.a ? 'bg-green-50/50 border-green-200' : 'hover:scale-[1.02] hover:shadow-apple-hover'}`}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <input type="file" ref={fileInputRefA} onChange={(e) => handleFileSelect('a', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 shadow-sm ${files.a ? 'bg-green-500 text-white scale-110' : 'bg-white group-hover:bg-blue-50 text-slate-400 group-hover:text-apple-blue'}`}>
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 shadow-sm ${files.a ? 'bg-apple-green text-white scale-110' : 'bg-white text-slate-300 group-hover:text-apple-blue'}`}>
                             {files.a ? <CheckCircle className="h-10 w-10" /> : <UploadCloud className="h-10 w-10" />}
                         </div>
-                        <h3 className="font-bold text-xl text-slate-800 mb-2">Referans Listesi</h3>
+                        <h3 className="font-semibold text-xl text-slate-900 mb-2">Referans Listesi</h3>
                         <p className="text-sm text-slate-500 max-w-[220px] text-center leading-snug">
-                            {files.a ? <span className="text-green-600 font-medium">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
+                            {files.a ? <span className="text-apple-green font-semibold">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
                         </p>
                     </div>
 
                     <div 
                         onClick={() => fileInputRefB.current?.click()}
-                         className={`group relative h-72 glass-card rounded-[32px] border-2 border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center overflow-hidden
-                        ${files.b ? 'border-green-400 bg-green-50/50' : 'border-slate-200 hover:border-apple-blue hover:shadow-2xl hover:-translate-y-1'}`}
+                         className={`group relative h-72 glass-card rounded-[32px] transition-all duration-300 cursor-pointer flex flex-col items-center justify-center overflow-hidden border border-white/60
+                        ${files.b ? 'bg-green-50/50 border-green-200' : 'hover:scale-[1.02] hover:shadow-apple-hover'}`}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <input type="file" ref={fileInputRefB} onChange={(e) => handleFileSelect('b', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 shadow-sm ${files.b ? 'bg-green-500 text-white scale-110' : 'bg-white group-hover:bg-blue-50 text-slate-400 group-hover:text-apple-blue'}`}>
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 shadow-sm ${files.b ? 'bg-apple-green text-white scale-110' : 'bg-white text-slate-300 group-hover:text-apple-blue'}`}>
                             {files.b ? <CheckCircle className="h-10 w-10" /> : <FileSpreadsheet className="h-10 w-10" />}
                         </div>
-                        <h3 className="font-bold text-xl text-slate-800 mb-2">Tüketim Verisi</h3>
+                        <h3 className="font-semibold text-xl text-slate-900 mb-2">Tüketim Verisi</h3>
                         <p className="text-sm text-slate-500 max-w-[220px] text-center leading-snug">
-                             {files.b ? <span className="text-green-600 font-medium">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
+                             {files.b ? <span className="text-apple-green font-semibold">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
                         </p>
                     </div>
                 </div>
 
                 {loadingProgress > 0 && (
-                     <div className="w-full max-w-lg mb-8 bg-white/60 backdrop-blur-md rounded-2xl p-4 border border-slate-200 shadow-glass">
-                        <div className="flex justify-between text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
+                     <div className="w-full max-w-lg mb-8 bg-white/60 backdrop-blur-md rounded-2xl p-5 border border-white/50 shadow-glass">
+                        <div className="flex justify-between text-xs font-bold text-slate-500 mb-3 uppercase tracking-wide">
                              <span>{loadingStatusText}</span>
                              <span>%{loadingProgress}</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
                              <div className="h-full bg-apple-blue transition-all duration-500 ease-out relative" style={{ width: `${loadingProgress}%` }}>
                                 <div className="absolute inset-0 bg-white/30 animate-[pulse_2s_infinite]"></div>
                              </div>
@@ -458,7 +455,7 @@ const App: React.FC = () => {
                 <button 
                     onClick={handleLoadData}
                     disabled={loadingProgress > 0 && loadingProgress < 100}
-                    className="w-full max-w-sm bg-apple-blue hover:bg-blue-600 text-white font-bold text-lg py-5 rounded-full shadow-xl shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+                    className="w-full max-w-sm bg-apple-blue hover:bg-blue-600 text-white font-semibold text-lg py-4 rounded-full shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
                 >
                     {loadingProgress > 0 && loadingProgress < 100 ? (
                         <Loader2 className="animate-spin h-6 w-6" /> 
@@ -475,11 +472,12 @@ const App: React.FC = () => {
 
   // --- DASHBOARD LAYOUT ---
   return (
-    <div className="flex h-screen bg-[#F5F5F7] font-sans overflow-hidden text-slate-900 relative">
+    <div className="flex h-screen bg-[#F5F5F7] font-sans overflow-hidden text-[#1D1D1F] relative selection:bg-apple-blue/20">
+        
         {/* Dashboard Animated Background */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none opacity-25">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none opacity-30">
              <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
-             <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+             <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
         </div>
 
         <ExplainerModal isOpen={showExplainer} onClose={() => setShowExplainer(false)} />
@@ -493,9 +491,9 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
             
             {/* Glassmorphic Header */}
-            <header className="h-20 flex items-center justify-between px-8 bg-white/60 backdrop-blur-xl border-b border-white/20 sticky top-0 z-30 shrink-0">
+            <header className="h-16 flex items-center justify-between px-8 bg-white/70 backdrop-blur-xl border-b border-white/20 sticky top-0 z-30 shrink-0">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
                         {dashboardView === 'general' && 'Genel Bakış'}
                         {dashboardView === 'ai-report' && 'Yapay Zeka Raporu'}
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
@@ -516,7 +514,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <button 
                       onClick={() => setShowExplainer(true)}
-                      className="p-2.5 text-slate-500 hover:bg-white/60 hover:text-apple-blue rounded-full transition-all border border-transparent hover:border-slate-200 shadow-sm hover:shadow-md"
+                      className="w-9 h-9 flex items-center justify-center text-slate-500 hover:bg-white hover:text-apple-blue rounded-full transition-all border border-transparent hover:border-slate-200 shadow-sm hover:shadow-md"
                       title="Nasıl Çalışır?"
                     >
                       <BookOpen className="h-5 w-5" />
@@ -535,9 +533,9 @@ const App: React.FC = () => {
                          {isGeneratingReport ? 'Analiz Ediliyor...' : aiReport ? 'Raporu Aç' : 'AI Analiz'}
                     </button>
                     
-                    <div className="w-px h-8 bg-slate-300/50 mx-2"></div>
+                    <div className="w-px h-6 bg-slate-300/50 mx-2"></div>
                     
-                    <div className="bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-white/40 shadow-sm">
+                    <div className="bg-white/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/40 shadow-sm">
                         <div className="text-xs font-semibold text-slate-600">
                             {rawSubscribers.length.toLocaleString()} <span className="text-slate-400 font-normal">Abone</span>
                         </div>
@@ -557,12 +555,12 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 h-[450px]">
                             
                             {/* CHART */}
-                            <div className="lg:col-span-2 h-full glass-panel rounded-[32px] shadow-sm hover:shadow-glass transition-all duration-500">
+                            <div className="lg:col-span-2 h-full glass-panel rounded-[32px] shadow-sm hover:shadow-apple-hover transition-all duration-500">
                                 <DashboardChart topRisk={filteredRiskData[0] || null} />
                             </div>
 
                             {/* MAP */}
-                            <div className="h-full lg:col-span-1 glass-panel rounded-[32px] shadow-sm hover:shadow-glass transition-all duration-500 p-1">
+                            <div className="h-full lg:col-span-1 glass-panel rounded-[32px] shadow-sm hover:shadow-apple-hover transition-all duration-500 p-1">
                                 {analysisStatus.georisk ? (
                                     <HotspotPanel 
                                         riskData={riskData} 
@@ -574,7 +572,7 @@ const App: React.FC = () => {
                                     />
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                        <div className="w-16 h-16 bg-slate-100/50 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
                                             <Building2 className="h-8 w-8 text-slate-300" />
                                         </div>
                                         <p className="text-slate-500 text-sm font-medium mb-4">Harita analizi henüz başlatılmadı.</p>
@@ -615,7 +613,7 @@ const App: React.FC = () => {
                                 title="Coğrafi Risk Analizi"
                                 desc="Yüksek riskli abonelere yakın (10m) mesafedeki, tutarsız tüketim gösteren diğer aboneleri tarar."
                                 icon={Zap}
-                                color="bg-red-500"
+                                color="bg-apple-red"
                                 moduleName="georisk"
                              />
                         ) : (
@@ -646,7 +644,7 @@ const App: React.FC = () => {
                                 title="Bina Tüketim Analizi"
                                 desc="Aynı binada oturan (aynı koordinat) en az 4 komşunun kış tüketim medyanını hesaplar ve bu ortalamadan %60 sapan daireleri listeler."
                                 icon={Building2}
-                                color="bg-indigo-500"
+                                color="bg-apple-indigo"
                                 moduleName="buildingAnomaly"
                              />
                         ) : (
@@ -665,7 +663,7 @@ const App: React.FC = () => {
                                 title="Müdahale Analizi (Bypass)"
                                 desc="Kış ve Yaz tüketim ortalamalarını karşılaştırarak ısıtma katsayısını hesaplar. Mevsimsel farkı olmayan (Bypass şüphesi) aboneleri tespit eder."
                                 icon={Zap}
-                                color="bg-orange-500"
+                                color="bg-apple-orange"
                                 moduleName="tampering"
                              />
                         ) : (
@@ -689,7 +687,7 @@ const App: React.FC = () => {
                                 title="120 sm³ Kuralı Analizi"
                                 desc="Ocak ve Şubat aylarının her ikisinde de 120 sm³ altında tüketim yapan, ancak boş ev statüsünde olmayan (Toplam > 25) aboneleri tarar."
                                 icon={Zap}
-                                color="bg-blue-500"
+                                color="bg-apple-blue"
                                 moduleName="rule120"
                              />
                         ) : (
@@ -708,7 +706,7 @@ const App: React.FC = () => {
                                 title="Tutarsız Tüketim Analizi"
                                 desc="Ani düşüşler, düz çizgi (sabit tüketim) ve sömestr tatili şüphelerini matematiksel trend eğimi ile analiz eder."
                                 icon={Zap}
-                                color="bg-pink-500"
+                                color="bg-apple-pink"
                                 moduleName="inconsistent"
                              />
                         ) : (

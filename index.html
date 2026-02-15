@@ -18,32 +18,25 @@
               apple: {
                 gray: '#F5F5F7',
                 blue: '#007AFF',
-                card: 'rgba(255, 255, 255, 0.7)',
-                text: '#1D1D1F',
-                border: 'rgba(0, 0, 0, 0.05)'
-              },
-              bg: {
-                main: '#F5F5F7', 
-                card: '#FFFFFF',
-                dark: '#E5E5EA'
-              },
-              accent: {
-                purple: '#5856D6',
-                cyan: '#32ADE6',
-                pink: '#FF2D55',
+                red: '#FF3B30',
                 green: '#34C759',
-                orange: '#FF9500'
+                orange: '#FF9500',
+                purple: '#AF52DE',
+                pink: '#FF2D55',
+                indigo: '#5856D6',
+                yellow: '#FFCC00',
+                card: 'rgba(255, 255, 255, 0.72)',
+                border: 'rgba(0, 0, 0, 0.05)'
               }
             },
             boxShadow: {
               'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
               'apple-hover': '0 12px 32px rgba(0, 0, 0, 0.08)',
-              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+              'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
             },
             animation: {
               'spin-slow': 'spin 3s linear infinite',
-              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'blob': 'blob 7s infinite',
+              'blob': 'blob 10s infinite',
             },
             keyframes: {
               blob: {
@@ -67,10 +60,11 @@
       }
       
       /* Apple-style Scrollbar */
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+      ::-webkit-scrollbar { width: 0px; background: transparent; } /* Hidden scrollbar for cleaner look */
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
       /* Glassmorphism Utilities */
       .glass-panel {
@@ -85,10 +79,10 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
       }
 
-      /* Custom Animations */
+      /* Animations */
       @keyframes slideUpFade {
         from { opacity: 0; transform: translateY(20px) scale(0.98); }
         to { opacity: 1; transform: translateY(0) scale(1); }
@@ -102,9 +96,14 @@
         animation: slideUpFade 0.4s ease-out forwards;
       }
 
-      tr { transition: background-color 0.15s ease; }
-
-      /* Map Styles - Modern Radar Dots */
+      /* Leaflet Customization */
+      .leaflet-container {
+        width: 100%; height: 100%;
+        background: #F2F2F7;
+        border-radius: 1.5rem;
+        outline: none;
+      }
+      
       .radar-dot {
         position: relative;
         width: 12px; height: 12px;
@@ -112,37 +111,15 @@
         background-color: currentColor;
         box-shadow: 0 0 0 2px white;
       }
-      
       .radar-dot::after {
-        content: '';
-        position: absolute;
-        top: 50%; left: 50%;
-        width: 100%; height: 100%;
-        transform: translate(-50%, -50%);
-        border-radius: 50%;
-        background-color: inherit;
-        opacity: 0.6;
-        animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        z-index: -1;
+        content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+        transform: translate(-50%, -50%); border-radius: 50%; background-color: inherit;
+        opacity: 0.6; animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: -1;
       }
-
-      .radar-dot.red { color: #EF4444; }
-      .radar-dot.orange { color: #F97316; }
-
       @keyframes radar-ping {
         0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
         75%, 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
       }
-      
-      .leaflet-container {
-        width: 100%; height: 100%;
-        background: #F8FAFC;
-        border-radius: 1.5rem;
-        outline: none;
-      }
-      
-      /* Remove Leaflet focus border */
-      .leaflet-interactive:focus { outline: none; }
     </style>
   <script type="importmap">
 {
