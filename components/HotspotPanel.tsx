@@ -1,8 +1,9 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { RiskScore, Hotspot, ReferenceLocation } from '../types';
-import { Map as MapIcon, Navigation, AlertTriangle, XCircle, Filter, MapPin, Search, AlertOctagon, Layers } from 'lucide-react';
+import { Map as MapIcon, Navigation, AlertTriangle, XCircle, Filter, MapPin, Search, AlertOctagon, Layers, ThermometerSun, CircleDot, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.heat'; // Import side-effects for L.heatLayer
 import { ISTANBUL_DISTRICTS } from '../utils/fraudEngine';
 
 interface HotspotPanelProps {
@@ -31,7 +32,49 @@ const MapController: React.FC<{ bounds: L.LatLngBoundsExpression | null }> = ({ 
   return null;
 };
 
-// --- Custom Icons ---
+// --- Heatmap Layer Component ---
+const HeatmapLayer = ({ points }: { points: { lat: number, lng: number, intensity: number }[] }) => {
+    const map = useMap();
+
+    useEffect(() => {
+      if (!points || points.length === 0) return;
+
+      // Transform data for leaflet.heat: [lat, lng, intensity]
+      const heatData = points.map(p => [p.lat, p.lng, p.intensity]);
+
+      // Check if L.heatLayer exists (it comes from the import)
+      // @ts-ignore
+      if (typeof L.heatLayer !== 'function') {
+          console.warn("Leaflet.heat not loaded");
+          return;
+      }
+
+      // @ts-ignore
+      const heat = L.heatLayer(heatData, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 13,
+          minOpacity: 0.4,
+          gradient: {
+            0.2: 'blue',
+            0.4: 'cyan',
+            0.6: 'lime',
+            0.8: 'yellow',
+            1.0: 'red'
+          }
+      });
+
+      heat.addTo(map);
+
+      return () => {
+          map.removeLayer(heat);
+      };
+    }, [points, map]);
+
+    return null;
+};
+
+// --- Custom Icons (Blinking/Pulsing) ---
 const redPulseIcon = L.divIcon({
   className: 'custom-div-icon',
   html: "<div class='radar-dot red'></div>",
@@ -48,15 +91,27 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
     detectedCity = 'İSTANBUL',
     availableDistricts = []
 }) => {
+  const [viewMode, setViewMode] = useState<'points' | 'heatmap'>('points'); // Default to points
   
-  // 1. Points to Render: Show ONLY Reference Locations (Known Fraud)
+  // 1. Points to Render: 
+  // ONLY REFERENCES (Known Bad Actors) are shown as requested
   const renderPoints = useMemo(() => {
-    const combined = [];
+    const combined: any[] = [];
+    
+    // A. Add References (Known Bad Actors) - TYPE: Reference
     referenceLocations.forEach(r => {
         if(r.lat !== 0 && r.lng !== 0) {
-            combined.push({ ...r, type: 'Reference', score: 100 });
+            combined.push({ 
+                ...r, 
+                type: 'Reference', 
+                score: 100, 
+                intensity: 1.0,
+                reason: 'Referans Listesi (Sabıkalı)',
+                muhatapNo: 'Referans Kaydı'
+            });
         }
     });
+
     return combined;
   }, [referenceLocations]);
 
@@ -64,35 +119,19 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
   const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
     let pointsToFit: {lat: number, lng: number}[] = [];
 
-    // If a district is selected
     if (selectedDistrict) {
-        // A. Try to find points in riskData belonging to this district 
-        // (We use riskData for geography even if we don't render them all, to get accurate district bounds)
-        const districtPoints = riskData.filter(r => r.district === selectedDistrict && r.location.lat !== 0);
-        
-        if (districtPoints.length > 0) {
-            pointsToFit = districtPoints.map(d => d.location);
-        } 
-        // B. Fallback: If it's a known Istanbul district polygon
-        else if (ISTANBUL_DISTRICTS[selectedDistrict]) {
+        // In district mode, fit to district polygon if available
+        if (ISTANBUL_DISTRICTS[selectedDistrict]) {
              const poly = ISTANBUL_DISTRICTS[selectedDistrict];
-             return L.latLngBounds(poly); // Return polygon bounds directly
+             return L.latLngBounds(poly);
         }
     } else {
-        // If NO district selected (City View), fit to all data points (References + Risks)
-        // to show the full extent of the city
-        const allRisks = riskData.filter(r => r.location.lat !== 0).map(r => r.location);
-        const allRefs = referenceLocations.filter(r => r.lat !== 0).map(r => ({lat: r.lat, lng: r.lng}));
-        pointsToFit = [...allRisks, ...allRefs];
+        // Fit to all points
+        pointsToFit = renderPoints.map(r => ({lat: r.lat, lng: r.lng}));
     }
 
-    // Default fallback if no data
-    if (pointsToFit.length === 0) {
-        // Default Istanbul view
-        return [[40.8, 28.6], [41.2, 29.4]];
-    }
+    if (pointsToFit.length === 0) return [[40.8, 28.6], [41.2, 29.4]];
 
-    // Calculate Min/Max for bounds
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
     pointsToFit.forEach(p => {
         if (p.lat < minLat) minLat = p.lat;
@@ -102,7 +141,7 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
     });
 
     return [[minLat, minLng], [maxLat, maxLng]];
-  }, [selectedDistrict, riskData, referenceLocations]);
+  }, [selectedDistrict, renderPoints]);
 
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -113,68 +152,88 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
   };
 
   const isIstanbul = detectedCity.toUpperCase().includes('ISTANBUL') || detectedCity.toUpperCase().includes('İSTANBUL');
-
-  // Use passed availableDistricts if present, otherwise fallback to Istanbul constant keys
   const districtList = availableDistricts.length > 0 ? availableDistricts : Object.keys(ISTANBUL_DISTRICTS);
+
+  // Count active points for display
+  const activePointCount = renderPoints.length;
 
   return (
     <div className="bg-white rounded-[30px] border border-slate-200 shadow-sm flex flex-col h-full relative overflow-hidden group">
       
       {/* Header / Controls Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pointer-events-none">
-          
-          {/* Title Card */}
-          <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-slate-200 pointer-events-auto transition-transform hover:scale-105 duration-300">
-                <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-red-500 to-orange-500 p-2 rounded-xl shadow-lg shadow-orange-500/20">
-                        <MapIcon className="h-5 w-5 text-white" />
+      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col gap-4 pointer-events-none">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            
+            {/* Title Card */}
+            <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-slate-200 pointer-events-auto transition-transform hover:scale-105 duration-300">
+                    <div className="flex items-center gap-3">
+                        <div className={`bg-gradient-to-br p-2 rounded-xl shadow-lg ${viewMode === 'heatmap' ? 'from-orange-500 to-red-600 shadow-orange-500/20' : 'from-blue-500 to-indigo-600 shadow-blue-500/20'}`}>
+                            {viewMode === 'heatmap' ? <ThermometerSun className="h-5 w-5 text-white" /> : <Siren className="h-5 w-5 text-white animate-pulse" />}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800 text-sm">{viewMode === 'heatmap' ? 'Referans Yoğunluğu' : 'Referans Noktaları'}</h3>
+                            <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium uppercase">
+                                {selectedDistrict ? selectedDistrict : `TÜM ${detectedCity}`}
+                                <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
+                                {activePointCount} Kayıt
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-slate-800 text-sm">Coğrafi Risk Haritası</h3>
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium uppercase">
-                            {selectedDistrict ? selectedDistrict : `TÜM ${detectedCity}`}
-                        </p>
-                    </div>
+            </div>
+
+            {/* Controls Group */}
+            <div className="flex items-center gap-2 pointer-events-auto">
+                {/* View Mode Toggle */}
+                <div className="bg-white/90 backdrop-blur-md p-1 rounded-xl shadow-lg border border-slate-200 flex items-center gap-1">
+                    <button 
+                        onClick={() => setViewMode('points')}
+                        className={`p-2 rounded-lg transition-all ${viewMode === 'points' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="Nokta Görünümü (Yanıp Sönen)"
+                    >
+                        <CircleDot className="h-4 w-4" />
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('heatmap')}
+                        className={`p-2 rounded-lg transition-all ${viewMode === 'heatmap' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="Isı Haritası"
+                    >
+                        <ThermometerSun className="h-4 w-4" />
+                    </button>
                 </div>
-          </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2 pointer-events-auto">
-             <div className="relative group/select shadow-lg rounded-xl">
-                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Search className="h-4 w-4" />
-                 </div>
-                 <select 
-                    value={selectedDistrict || ""} 
-                    onChange={handleDistrictChange}
-                    className="pl-9 pr-8 py-2.5 bg-white/90 backdrop-blur-md border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 appearance-none cursor-pointer min-w-[160px]"
-                 >
-                     <option value="">Tüm {detectedCity}</option>
-                     {districtList.sort().map(d => (
-                         <option key={d} value={d}>{d}</option>
-                     ))}
-                 </select>
-                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                    <Layers className="h-3 w-3" />
-                 </div>
-             </div>
+                {/* District Filter */}
+                <div className="relative group/select shadow-lg rounded-xl">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Search className="h-4 w-4" />
+                    </div>
+                    <select 
+                        value={selectedDistrict || ""} 
+                        onChange={handleDistrictChange}
+                        className="pl-9 pr-8 py-2.5 bg-white/90 backdrop-blur-md border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 appearance-none cursor-pointer min-w-[140px]"
+                    >
+                        <option value="">Tüm {detectedCity}</option>
+                        {districtList.sort().map(d => (
+                            <option key={d} value={d}>{d}</option>
+                        ))}
+                    </select>
+                </div>
 
-             {selectedDistrict && (
-                <button 
-                    onClick={() => onDistrictSelect && onDistrictSelect(null)}
-                    className="p-2.5 bg-white/90 backdrop-blur-md text-red-500 rounded-xl border-none shadow-lg hover:bg-red-50 transition-colors"
-                    title="Filtreyi Temizle"
-                >
-                    <XCircle className="h-5 w-5" />
-                </button>
-             )}
+                {selectedDistrict && (
+                    <button 
+                        onClick={() => onDistrictSelect && onDistrictSelect(null)}
+                        className="p-2.5 bg-white/90 backdrop-blur-md text-red-500 rounded-xl border-none shadow-lg hover:bg-red-50 transition-colors"
+                        title="Filtreyi Temizle"
+                    >
+                        <XCircle className="h-5 w-5" />
+                    </button>
+                )}
+            </div>
           </div>
       </div>
 
       {/* Map Content Area */}
       <div className="flex-1 w-full relative bg-slate-50 z-0">
          <MapContainer 
-            // Default center, will be overridden by MapController
             center={[41.0082, 28.9784]} 
             zoom={10} 
             scrollWheelZoom={true} 
@@ -182,27 +241,32 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
             attributionControl={false}
             zoomControl={false} 
          >
-            {/* Elegant Map Tiles (CartoDB Voyager - cleaner than Positron) */}
+            {/* Elegant Map Tiles */}
             <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                url={viewMode === 'heatmap' 
+                    ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"}
             />
             
             <MapController bounds={mapBounds} />
 
-            {/* Render Districts - ONLY IF ISTANBUL (Because we only have polygons for Istanbul) */}
+            {/* Render Heatmap Layer if Mode is Heatmap */}
+            {viewMode === 'heatmap' && (
+                <HeatmapLayer points={renderPoints} />
+            )}
+
+            {/* Render Districts (Polygons) */}
             {isIstanbul && Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
                 const isSelected = selectedDistrict === name;
-                
                 return (
                     <Polygon 
                         key={name}
                         positions={poly}
                         pathOptions={{
-                            color: isSelected ? '#F43F5E' : '#94A3B8', // Rose-500 or Slate-400
+                            color: isSelected ? '#F43F5E' : '#94A3B8',
                             weight: isSelected ? 2 : 1,
                             dashArray: isSelected ? undefined : '4, 8',
-                            fillColor: isSelected ? '#F43F5E' : 'transparent',
-                            fillOpacity: isSelected ? 0.1 : 0.0,
+                            fillColor: 'transparent',
                             opacity: isSelected ? 1 : 0.4
                         }}
                         eventHandlers={{
@@ -225,32 +289,37 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                 )
             })}
             
-            {/* Render Points - ONLY REFERENCE POINTS */}
-            {renderPoints.map((p, i) => {
+            {/* 
+                RENDER BLINKING MARKERS - ONLY REFERENCES
+            */}
+            {viewMode === 'points' && renderPoints.map((p, i) => {
                 return (
                     <Marker 
-                        key={`${p.type}-${i}`} 
+                        key={`${p.type}-${p.id}-${i}`} 
                         position={[p.lat, p.lng]} 
                         icon={redPulseIcon}
                     >
                         <Popup className="custom-popup" closeButton={false}>
-                            <div className="p-0.5 min-w-[180px]">
-                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-red-100">
-                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100">
-                                        <AlertOctagon className="h-3.5 w-3.5 text-red-600" />
+                            <div className="p-0.5 min-w-[200px]">
+                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-red-600 bg-red-100">
+                                        <AlertTriangle className="h-4 w-4" />
                                     </div>
                                     <div>
                                         <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">
-                                            Referans Kayıt
+                                            Referans Kaydı (Sabıkalı)
                                         </div>
-                                        <div className="font-bold text-slate-800 text-xs leading-none mt-0.5">{p.id}</div>
+                                        <div className="font-bold text-slate-800 text-sm leading-tight mt-0.5">{p.id}</div>
                                     </div>
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 p-1.5 rounded-md border border-slate-100">
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
                                         <MapPin className="h-3 w-3 text-slate-400" />
                                         <span className="font-mono">{p.lat.toFixed(5)}, {p.lng.toFixed(5)}</span>
+                                    </div>
+                                    <div className="text-[10px] font-bold text-slate-600 mt-1 bg-red-50 p-1.5 rounded text-red-700 leading-snug">
+                                        Kara Liste / Referans
                                     </div>
                                 </div>
                             </div>
@@ -263,16 +332,29 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
          {/* Legend / Info Footer */}
          <div className="absolute bottom-6 left-6 z-[500] pointer-events-none">
              <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-xl flex flex-col gap-2.5 pointer-events-auto">
-                 <div className="flex items-center gap-3">
-                     <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white box-content"></span>
-                     </span>
-                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-700">Referans Noktası</span>
-                        <span className="text-[9px] text-slate-400">Sabıkalı / Kara Liste</span>
+                 {viewMode === 'heatmap' ? (
+                     <div className="flex flex-col gap-1.5 min-w-[120px]">
+                         <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">Referans Yoğunluğu</span>
+                         <div className="h-2 w-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-red-600"></div>
+                         <div className="flex justify-between text-[9px] text-slate-400 font-medium">
+                             <span>Seyrek</span>
+                             <span>Yoğun</span>
+                         </div>
                      </div>
-                 </div>
+                 ) : (
+                     <div className="flex flex-col gap-2">
+                         <div className="flex items-center gap-3">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white box-content"></span>
+                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-700">Referans Noktası</span>
+                                <span className="text-[9px] text-slate-400">Sabıkalı / Kara Liste</span>
+                            </div>
+                         </div>
+                     </div>
+                 )}
              </div>
          </div>
       </div>
