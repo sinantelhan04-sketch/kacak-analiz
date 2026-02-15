@@ -1,3 +1,4 @@
+
 import { Subscriber, RiskScore, BuildingRisk } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
@@ -137,10 +138,11 @@ const updateTotalScore = (score: RiskScore): RiskScore => {
 
 // NEW: Building Consumption Analysis
 export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingRisk[] => {
-    // 1. Filtre: Sadece "Konut" (Kombi veya Merkezi)
+    // 1. Filtre: Sadece "Konut" ve sadece "KOMBİ"
     const validSubscribers = subscribers.filter(s => {
         const type = s.rawAboneTipi ? s.rawAboneTipi.toLocaleLowerCase('tr') : '';
-        return type.includes('konut') && (type.includes('kombi') || type.includes('merkezi'));
+        // "merkezi" sistemleri hariç tutuyoruz, sadece bireysel kombi
+        return type.includes('konut') && type.includes('kombi');
     });
 
     // 2. Gruplama: Enlem ve Boylam TAMAMEN aynı olanlar (Noktadan sonraki tüm basamaklar dahil)
