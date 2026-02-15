@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { RiskScore, Hotspot, ReferenceLocation } from '../types';
-import { Map as MapIcon, Navigation, AlertTriangle, XCircle, Filter, MapPin, Search, AlertOctagon, Layers, ThermometerSun, CircleDot, Siren } from 'lucide-react';
+import { Map as MapIcon, Navigation, AlertTriangle, XCircle, Filter, MapPin, Search, AlertOctagon, Layers, ThermometerSun, CircleDot, Siren, Satellite, TrafficCone, Landmark, Globe, Menu, X, Plus, Minus } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat'; // Import side-effects for L.heatLayer
@@ -25,7 +25,7 @@ const MapController: React.FC<{ bounds: L.LatLngBoundsExpression | null }> = ({ 
         padding: [50, 50],
         maxZoom: 15,
         animate: true,
-        duration: 1.5
+        duration: 1.0
       });
     }
   }, [bounds, map]);
@@ -39,15 +39,10 @@ const HeatmapLayer = ({ points }: { points: { lat: number, lng: number, intensit
     useEffect(() => {
       if (!points || points.length === 0) return;
 
-      // Transform data for leaflet.heat: [lat, lng, intensity]
       const heatData = points.map(p => [p.lat, p.lng, p.intensity]);
 
-      // Check if L.heatLayer exists (it comes from the import)
       // @ts-ignore
-      if (typeof L.heatLayer !== 'function') {
-          console.warn("Leaflet.heat not loaded");
-          return;
-      }
+      if (typeof L.heatLayer !== 'function') return;
 
       // @ts-ignore
       const heat = L.heatLayer(heatData, {
@@ -56,11 +51,11 @@ const HeatmapLayer = ({ points }: { points: { lat: number, lng: number, intensit
           maxZoom: 13,
           minOpacity: 0.4,
           gradient: {
-            0.2: 'blue',
-            0.4: 'cyan',
-            0.6: 'lime',
-            0.8: 'yellow',
-            1.0: 'red'
+            0.2: '#4285F4', // Google Blue
+            0.4: '#34A853', // Google Green
+            0.6: '#FBBC05', // Google Yellow
+            0.8: '#EA4335', // Google Red
+            1.0: '#B31412'  // Dark Red
           }
       });
 
@@ -74,31 +69,32 @@ const HeatmapLayer = ({ points }: { points: { lat: number, lng: number, intensit
     return null;
 };
 
-// --- Custom Icons (Blinking/Pulsing) ---
-const redPulseIcon = L.divIcon({
-  className: 'custom-div-icon',
-  html: "<div class='radar-dot red'></div>",
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
+// --- Radar Style Pin Icon ---
+const radarIcon = L.divIcon({
+  className: 'radar-icon-container',
+  html: `<div class="radar-marker">
+            <div class="radar-wave"></div>
+            <div class="radar-dot"></div>
+         </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12], // Center the icon
   popupAnchor: [0, -10]
 });
 
 const HotspotPanel: React.FC<HotspotPanelProps> = ({ 
     referenceLocations = [], 
-    riskData = [], 
     selectedDistrict, 
     onDistrictSelect,
     detectedCity = 'İSTANBUL',
     availableDistricts = []
 }) => {
-  const [viewMode, setViewMode] = useState<'points' | 'heatmap'>('points'); // Default to points
+  // Map Style: Roadmap (Google Default) or Satellite (Google Hybrid)
+  const [mapStyle, setMapStyle] = useState<'roadmap' | 'satellite'>('roadmap');
+  const [showHeatmap, setShowHeatmap] = useState(false);
   
-  // 1. Points to Render: 
-  // ONLY REFERENCES (Known Bad Actors) are shown as requested
+  // 1. Points to Render
   const renderPoints = useMemo(() => {
     const combined: any[] = [];
-    
-    // A. Add References (Known Bad Actors) - TYPE: Reference
     referenceLocations.forEach(r => {
         if(r.lat !== 0 && r.lng !== 0) {
             combined.push({ 
@@ -111,29 +107,20 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
             });
         }
     });
-
     return combined;
   }, [referenceLocations]);
 
-  // 2. Calculate Map Bounds based on Selection
+  // 2. Map Bounds
   const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
-    let pointsToFit: {lat: number, lng: number}[] = [];
-
-    if (selectedDistrict) {
-        // In district mode, fit to district polygon if available
-        if (ISTANBUL_DISTRICTS[selectedDistrict]) {
-             const poly = ISTANBUL_DISTRICTS[selectedDistrict];
-             return L.latLngBounds(poly);
-        }
-    } else {
-        // Fit to all points
-        pointsToFit = renderPoints.map(r => ({lat: r.lat, lng: r.lng}));
+    if (selectedDistrict && ISTANBUL_DISTRICTS[selectedDistrict]) {
+        const poly = ISTANBUL_DISTRICTS[selectedDistrict];
+        return L.latLngBounds(poly);
     }
 
-    if (pointsToFit.length === 0) return [[40.8, 28.6], [41.2, 29.4]];
+    if (renderPoints.length === 0) return [[40.8, 28.6], [41.2, 29.4]];
 
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-    pointsToFit.forEach(p => {
+    renderPoints.forEach(p => {
         if (p.lat < minLat) minLat = p.lat;
         if (p.lat > maxLat) maxLat = p.lat;
         if (p.lng < minLng) minLng = p.lng;
@@ -142,7 +129,6 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
 
     return [[minLat, minLng], [maxLat, maxLng]];
   }, [selectedDistrict, renderPoints]);
-
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
@@ -153,86 +139,117 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
 
   const isIstanbul = detectedCity.toUpperCase().includes('ISTANBUL') || detectedCity.toUpperCase().includes('İSTANBUL');
   const districtList = availableDistricts.length > 0 ? availableDistricts : Object.keys(ISTANBUL_DISTRICTS);
-
-  // Count active points for display
   const activePointCount = renderPoints.length;
 
   return (
-    <div className="bg-white rounded-[30px] border border-slate-200 shadow-sm flex flex-col h-full relative overflow-hidden group">
+    <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm flex flex-col h-full relative overflow-hidden group font-sans">
       
-      {/* Header / Controls Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col gap-4 pointer-events-none">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            
-            {/* Title Card */}
-            <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-slate-200 pointer-events-auto transition-transform hover:scale-105 duration-300">
-                    <div className="flex items-center gap-3">
-                        <div className={`bg-gradient-to-br p-2 rounded-xl shadow-lg ${viewMode === 'heatmap' ? 'from-orange-500 to-red-600 shadow-orange-500/20' : 'from-blue-500 to-indigo-600 shadow-blue-500/20'}`}>
-                            {viewMode === 'heatmap' ? <ThermometerSun className="h-5 w-5 text-white" /> : <Siren className="h-5 w-5 text-white animate-pulse" />}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-800 text-sm">{viewMode === 'heatmap' ? 'Referans Yoğunluğu' : 'Referans Noktaları'}</h3>
-                            <p className="text-[10px] text-slate-500 flex items-center gap-1 font-medium uppercase">
-                                {selectedDistrict ? selectedDistrict : `TÜM ${detectedCity}`}
-                                <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
-                                {activePointCount} Kayıt
-                            </p>
-                        </div>
+      {/* Google Maps Style Search Bar (Top Left) */}
+      <div className="absolute top-4 left-4 z-[500] w-[360px] max-w-[calc(100%-32px)]">
+          <div className="bg-white rounded-lg shadow-md border border-slate-100 flex items-center p-0.5 h-12 transition-shadow hover:shadow-lg">
+             <div className="w-12 h-full flex items-center justify-center text-slate-500 cursor-pointer hover:text-slate-700">
+                <Menu className="h-5 w-5" />
+             </div>
+             
+             <div className="flex-1 h-full relative">
+                <select 
+                    value={selectedDistrict || ""} 
+                    onChange={handleDistrictChange}
+                    className="w-full h-full appearance-none bg-transparent text-sm text-slate-700 font-medium px-2 focus:outline-none cursor-pointer"
+                >
+                    <option value="">Google Haritalar'da Ara</option>
+                    {districtList.sort().map(d => (
+                        <option key={d} value={d}>{d}</option>
+                    ))}
+                </select>
+                {!selectedDistrict && (
+                    <div className="absolute top-0 right-0 h-full flex items-center pr-3 pointer-events-none">
+                         <Search className="h-5 w-5 text-[#4285F4]" />
                     </div>
-            </div>
-
-            {/* Controls Group */}
-            <div className="flex items-center gap-2 pointer-events-auto">
-                {/* View Mode Toggle */}
-                <div className="bg-white/90 backdrop-blur-md p-1 rounded-xl shadow-lg border border-slate-200 flex items-center gap-1">
-                    <button 
-                        onClick={() => setViewMode('points')}
-                        className={`p-2 rounded-lg transition-all ${viewMode === 'points' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                        title="Nokta Görünümü (Yanıp Sönen)"
-                    >
-                        <CircleDot className="h-4 w-4" />
-                    </button>
-                    <button 
-                        onClick={() => setViewMode('heatmap')}
-                        className={`p-2 rounded-lg transition-all ${viewMode === 'heatmap' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                        title="Isı Haritası"
-                    >
-                        <ThermometerSun className="h-4 w-4" />
-                    </button>
-                </div>
-
-                {/* District Filter */}
-                <div className="relative group/select shadow-lg rounded-xl">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        <Search className="h-4 w-4" />
-                    </div>
-                    <select 
-                        value={selectedDistrict || ""} 
-                        onChange={handleDistrictChange}
-                        className="pl-9 pr-8 py-2.5 bg-white/90 backdrop-blur-md border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 appearance-none cursor-pointer min-w-[140px]"
-                    >
-                        <option value="">Tüm {detectedCity}</option>
-                        {districtList.sort().map(d => (
-                            <option key={d} value={d}>{d}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {selectedDistrict && (
-                    <button 
-                        onClick={() => onDistrictSelect && onDistrictSelect(null)}
-                        className="p-2.5 bg-white/90 backdrop-blur-md text-red-500 rounded-xl border-none shadow-lg hover:bg-red-50 transition-colors"
-                        title="Filtreyi Temizle"
-                    >
-                        <XCircle className="h-5 w-5" />
-                    </button>
                 )}
-            </div>
+             </div>
+
+             <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
+             {selectedDistrict ? (
+                 <button 
+                    onClick={() => onDistrictSelect && onDistrictSelect(null)}
+                    className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-[#EA4335] rounded-full hover:bg-slate-50"
+                 >
+                    <X className="h-5 w-5" />
+                 </button>
+             ) : (
+                <button 
+                    className="w-10 h-10 flex items-center justify-center text-[#1a73e8] hover:bg-blue-50 rounded-full"
+                    title="Yol Tarifi"
+                >
+                    <Navigation className="h-5 w-5 fill-current" />
+                </button>
+             )}
+          </div>
+          
+          {/* Quick Filter Chips (Below Search) */}
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <button 
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm border transition-colors whitespace-nowrap
+                ${showHeatmap 
+                    ? 'bg-[#1a73e8] text-white border-[#1a73e8]' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              >
+                  <TrafficCone className="h-3.5 w-3.5" />
+                  Trafik (Yoğunluk)
+              </button>
+              
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-600 text-xs font-medium shadow-sm border border-slate-200 whitespace-nowrap">
+                   <Landmark className="h-3.5 w-3.5 text-slate-400" />
+                   {selectedDistrict || detectedCity}
+              </div>
           </div>
       </div>
 
+      {/* Layer Toggle (Bottom Left) */}
+      <div className="absolute bottom-6 left-4 z-[500] group/layers">
+          <div className="relative w-16 h-16 rounded-lg shadow-md border-2 border-white overflow-hidden cursor-pointer hover:border-slate-300 transition-all">
+               {/* Show the OTHER layer as preview */}
+               {mapStyle === 'roadmap' ? (
+                   <div onClick={() => setMapStyle('satellite')} className="w-full h-full relative">
+                        <img src="https://mt0.google.com/vt/lyrs=s&x=0&y=0&z=0" className="w-full h-full object-cover" alt="Uydu" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] font-bold text-center py-0.5 backdrop-blur-sm">
+                            Uydu
+                        </div>
+                   </div>
+               ) : (
+                   <div onClick={() => setMapStyle('roadmap')} className="w-full h-full relative bg-[#F8F9FA]">
+                        <div className="absolute inset-0 grid grid-cols-2 gap-0.5 p-1 opacity-50">
+                            <div className="bg-blue-200 rounded-sm"></div><div className="bg-gray-200 rounded-sm"></div>
+                            <div className="bg-gray-200 rounded-sm"></div><div className="bg-green-200 rounded-sm"></div>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-white/80 text-slate-800 text-[10px] font-bold text-center py-0.5 backdrop-blur-sm">
+                            Harita
+                        </div>
+                   </div>
+               )}
+          </div>
+      </div>
+
+      {/* Zoom Controls (Bottom Right) */}
+      <div className="absolute bottom-8 right-4 z-[500] flex flex-col gap-2">
+          <div className="bg-white rounded shadow-md border border-slate-100 flex flex-col">
+               <button className="w-9 h-9 flex items-center justify-center text-slate-600 hover:text-black hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                   <Plus className="h-5 w-5" />
+               </button>
+               <button className="w-9 h-9 flex items-center justify-center text-slate-600 hover:text-black hover:bg-slate-50 transition-colors">
+                   <Minus className="h-5 w-5" />
+               </button>
+          </div>
+          <button className="w-9 h-9 bg-white rounded shadow-md border border-slate-100 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors">
+               <Navigation className="h-5 w-5 fill-current transform rotate-45" />
+          </button>
+      </div>
+
       {/* Map Content Area */}
-      <div className="flex-1 w-full relative bg-slate-50 z-0">
+      <div className="flex-1 w-full relative bg-[#F8F9FA] z-0">
          <MapContainer 
             center={[41.0082, 28.9784]} 
             zoom={10} 
@@ -241,21 +258,28 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
             attributionControl={false}
             zoomControl={false} 
          >
-            {/* Elegant Map Tiles */}
-            <TileLayer
-                url={viewMode === 'heatmap' 
-                    ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"}
-            />
+            {/* GOOGLE MAPS LAYERS */}
+            {mapStyle === 'roadmap' ? (
+                 <TileLayer
+                    url="https://mt0.google.com/vt/lyrs=m&hl=tr&x={x}&y={y}&z={z}"
+                    maxZoom={20}
+                 />
+            ) : (
+                 <TileLayer
+                    // Hybrid: s = satellite, h = roads/labels
+                    url="https://mt0.google.com/vt/lyrs=y&hl=tr&x={x}&y={y}&z={z}"
+                    maxZoom={20}
+                 />
+            )}
             
             <MapController bounds={mapBounds} />
 
-            {/* Render Heatmap Layer if Mode is Heatmap */}
-            {viewMode === 'heatmap' && (
+            {/* Render Heatmap Layer Overlay */}
+            {showHeatmap && (
                 <HeatmapLayer points={renderPoints} />
             )}
 
-            {/* Render Districts (Polygons) */}
+            {/* Render Districts (Polygons) - Google Style */}
             {isIstanbul && Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
                 const isSelected = selectedDistrict === name;
                 return (
@@ -263,11 +287,11 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                         key={name}
                         positions={poly}
                         pathOptions={{
-                            color: isSelected ? '#F43F5E' : '#94A3B8',
+                            color: isSelected ? '#EA4335' : (mapStyle === 'satellite' ? '#fff' : '#5F6368'),
                             weight: isSelected ? 2 : 1,
-                            dashArray: isSelected ? undefined : '4, 8',
-                            fillColor: 'transparent',
-                            opacity: isSelected ? 1 : 0.4
+                            dashArray: isSelected ? undefined : '4, 4',
+                            fillColor: isSelected ? '#EA4335' : 'transparent',
+                            fillOpacity: isSelected ? 0.08 : 0
                         }}
                         eventHandlers={{
                             click: () => {
@@ -278,10 +302,10 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                             }
                         }}
                     >
-                        {isSelected && (
-                             <Tooltip permanent direction="center" opacity={1} className="district-label-tooltip">
-                                <span className="text-[10px] font-black tracking-widest text-rose-600 bg-white/90 px-3 py-1 rounded-full shadow-sm border border-rose-100">
-                                    {name.toUpperCase()}
+                         {isSelected && (
+                             <Tooltip permanent direction="center" opacity={1} className="google-tooltip">
+                                <span className="text-sm font-medium text-[#EA4335] drop-shadow-sm px-1 py-0.5 bg-white/90 rounded border border-[#EA4335]/20 shadow-sm">
+                                    {name}
                                 </span>
                             </Tooltip>
                         )}
@@ -289,37 +313,36 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                 )
             })}
             
-            {/* 
-                RENDER BLINKING MARKERS - ONLY REFERENCES
-            */}
-            {viewMode === 'points' && renderPoints.map((p, i) => {
+            {/* RENDER MARKERS */}
+            {!showHeatmap && renderPoints.map((p, i) => {
                 return (
                     <Marker 
                         key={`${p.type}-${p.id}-${i}`} 
                         position={[p.lat, p.lng]} 
-                        icon={redPulseIcon}
+                        icon={radarIcon}
                     >
-                        <Popup className="custom-popup" closeButton={false}>
-                            <div className="p-0.5 min-w-[200px]">
-                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-red-600 bg-red-100">
-                                        <AlertTriangle className="h-4 w-4" />
+                        <Popup className="google-popup" closeButton={false} offset={[0, -20]}>
+                            <div className="w-[240px]">
+                                <div className="p-0">
+                                    {/* Google Info Window Style */}
+                                    <div className="border-b border-slate-100 pb-2 mb-2">
+                                        <h4 className="font-medium text-slate-800 text-sm leading-tight">{p.id}</h4>
+                                        <p className="text-xs text-slate-500 mt-0.5">{p.lat.toFixed(5)}, {p.lng.toFixed(5)}</p>
                                     </div>
-                                    <div>
-                                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">
-                                            Referans Kaydı (Sabıkalı)
+                                    
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                            <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
                                         </div>
-                                        <div className="font-bold text-slate-800 text-sm leading-tight mt-0.5">{p.id}</div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-bold text-slate-700 uppercase">Referans Kaydı</span>
+                                            <span className="text-[10px] text-slate-500">Kara listede mevcut</span>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                                        <MapPin className="h-3 w-3 text-slate-400" />
-                                        <span className="font-mono">{p.lat.toFixed(5)}, {p.lng.toFixed(5)}</span>
-                                    </div>
-                                    <div className="text-[10px] font-bold text-slate-600 mt-1 bg-red-50 p-1.5 rounded text-red-700 leading-snug">
-                                        Kara Liste / Referans
+
+                                    <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center">
+                                        <span className="text-[10px] text-blue-600 hover:underline cursor-pointer font-medium">Bu konumu ara</span>
+                                        <span className="text-[10px] text-blue-600 hover:underline cursor-pointer font-medium">Yakındakileri kaydet</span>
                                     </div>
                                 </div>
                             </div>
@@ -329,60 +352,76 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
             })}
          </MapContainer>
 
-         {/* Legend / Info Footer */}
-         <div className="absolute bottom-6 left-6 z-[500] pointer-events-none">
-             <div className="bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-slate-200 shadow-xl flex flex-col gap-2.5 pointer-events-auto">
-                 {viewMode === 'heatmap' ? (
-                     <div className="flex flex-col gap-1.5 min-w-[120px]">
-                         <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">Referans Yoğunluğu</span>
-                         <div className="h-2 w-full rounded-full bg-gradient-to-r from-blue-400 via-yellow-400 to-red-600"></div>
-                         <div className="flex justify-between text-[9px] text-slate-400 font-medium">
-                             <span>Seyrek</span>
-                             <span>Yoğun</span>
-                         </div>
-                     </div>
-                 ) : (
-                     <div className="flex flex-col gap-2">
-                         <div className="flex items-center gap-3">
-                            <span className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-white box-content"></span>
-                            </span>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-slate-700">Referans Noktası</span>
-                                <span className="text-[9px] text-slate-400">Sabıkalı / Kara Liste</span>
-                            </div>
-                         </div>
-                     </div>
-                 )}
-             </div>
+         {/* Google Logo / Attribution */}
+         <div className="absolute bottom-1 left-20 z-[400] pointer-events-none select-none opacity-80">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/368px-Google_2015_logo.svg.png" alt="Google" className="h-4" />
+         </div>
+         <div className="absolute bottom-1 right-20 z-[400] pointer-events-none select-none text-[10px] text-slate-600">
+             Harita verileri ©2025 Google
          </div>
       </div>
 
       <style>{`
-        .district-label-tooltip {
+        .google-tooltip {
             background: transparent;
             border: none;
             box-shadow: none;
         }
-        .district-label-tooltip::before {
+        .google-tooltip::before {
             display: none;
         }
+        /* Google Style Popup */
         .leaflet-popup-content-wrapper {
-            border-radius: 16px;
-            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            box-shadow: 0 2px 7px 1px rgba(0,0,0,0.3);
             padding: 0;
             overflow: hidden;
+            background: #fff;
+            font-family: Roboto, Arial, sans-serif;
         }
         .leaflet-popup-content {
-            margin: 12px;
+            margin: 16px;
             width: auto !important;
         }
         .leaflet-popup-tip {
-            background: white;
+            background: #fff;
+            box-shadow: 0 2px 7px 1px rgba(0,0,0,0.3);
         }
         .leaflet-container {
-             font-family: inherit;
+             font-family: Roboto, Arial, sans-serif;
+             background: #F8F9FA;
+        }
+
+        /* RADAR PIN STYLES */
+        .radar-marker {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .radar-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #EF4444; /* Red-500 */
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .radar-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(239, 68, 68, 0.6);
+            border-radius: 50%;
+            z-index: 1;
+            animation: radar-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes radar-ping {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
         }
       `}</style>
     </div>

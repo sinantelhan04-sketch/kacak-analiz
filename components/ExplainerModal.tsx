@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Download, Loader2 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import React from 'react';
+import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, ScanSearch, Radar, CheckCircle2 } from 'lucide-react';
 
 interface ExplainerModalProps {
   isOpen: boolean;
@@ -9,95 +7,7 @@ interface ExplainerModalProps {
 }
 
 const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
-  const [isDownloading, setIsDownloading] = useState(false);
-
   if (!isOpen) return null;
-
-  const handleDownloadPDF = async () => {
-    setIsDownloading(true);
-    
-    // 1. Hedef elementi seç
-    const element = document.getElementById('explainer-content');
-    if (!element) {
-        setIsDownloading(false);
-        return;
-    }
-
-    try {
-        // 2. Elementi KLONLA
-        const clone = element.cloneNode(true) as HTMLElement;
-
-        // 3. Klonu izole bir kapsayıcıya koy (Ekran dışı ve sabit genişlik)
-        // Masaüstü görünümünü (3 kolonlu grid vs.) korumak için genişliği 1080px yapıyoruz.
-        // Daha sonra bu görüntüyü A4 kağıdına sığacak şekilde küçülteceğiz.
-        const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.top = '-10000px';
-        container.style.left = '0';
-        container.style.zIndex = '-9999';
-        container.style.width = '1080px'; // Masaüstü simülasyonu
-        container.appendChild(clone);
-        document.body.appendChild(container);
-
-        // 4. Klon stillerini PDF için optimize et
-        clone.style.width = '100%';
-        clone.style.height = 'auto';
-        clone.style.maxWidth = 'none'; // Tailwind max-w-4xl kısıtlamasını kaldır
-        clone.style.margin = '0';      // mx-auto ortalamasını kaldır
-        clone.style.padding = '40px';  // Kağıt kenar boşlukları
-        clone.style.backgroundColor = '#F5F5F7'; // Orijinal arka plan rengi
-        clone.style.transform = 'none'; // Animasyon transformlarını sıfırla
-        clone.style.animation = 'none';
-        clone.style.borderRadius = '0';
-        clone.style.overflow = 'visible';
-
-        // 5. html2canvas ile yüksek çözünürlüklü görüntü al
-        const canvas = await html2canvas(clone, {
-            scale: 2, // Retina kalitesi
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#F5F5F7',
-            width: 1080, // Container genişliği
-            windowWidth: 1080 // Media query'lerin masaüstü gibi davranması için
-        });
-
-        // Kapsayıcıyı temizle
-        document.body.removeChild(container);
-
-        // 6. PDF Oluştur (A4)
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();   // 210mm
-        const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
-        
-        // Görüntüyü A4 genişliğine ölçekle (Aspect Ratio koruyarak)
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // İlk sayfa
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-
-        // İçerik tek sayfaya sığmıyorsa yeni sayfalar ekle
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight; // Önceki sayfanın bittiği yerden devam et
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, - (pdfHeight * Math.ceil((imgHeight - heightLeft) / pdfHeight)) , imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
-        }
-
-        pdf.save('Kacak_Analiz_Algoritma_Dokumani.pdf');
-    } catch (error) {
-        console.error('PDF oluşturma hatası:', error);
-        alert('PDF oluşturulurken bir hata oluştu.');
-    } finally {
-        setIsDownloading(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -108,278 +18,240 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
       ></div>
 
       {/* Modal Content */}
-      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative z-10 animate-slide-up ring-1 ring-slate-200">
+      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col relative z-10 animate-slide-up ring-1 ring-slate-200">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-20">
+        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-20">
           <div>
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2.5">
-              <Scale className="h-6 w-6 text-apple-blue" />
-              Algoritma ve Analiz Mantığı
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+              <div className="w-10 h-10 bg-apple-blue/10 rounded-full flex items-center justify-center">
+                <Radar className="h-6 w-6 text-apple-blue" />
+              </div>
+              Sistem Nasıl Çalışır?
             </h2>
-            <p className="text-sm text-slate-500 mt-1">Sistemin kaçak tespitinde kullandığı istatistiksel modeller ve risk kriterleri.</p>
+            <p className="text-sm text-slate-500 mt-1 pl-14">Veri işleme hattı, tespit algoritmaları ve yapay zeka entegrasyonu.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${isDownloading ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
-                title="PDF Olarak İndir"
-            >
-                {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {isDownloading ? 'Hazırlanıyor...' : 'PDF İndir'}
-            </button>
-            <button 
-                onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
-            >
-                <X className="h-6 w-6" />
-            </button>
-          </div>
+          <button 
+              onClick={onClose}
+              className="p-2.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600 border border-transparent hover:border-slate-200"
+          >
+              <X className="h-6 w-6" />
+          </button>
         </div>
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto p-0 custom-scrollbar bg-[#F5F5F7]">
           
-          {/* Capture Target for PDF */}
-          <div id="explainer-content" className="max-w-4xl mx-auto py-8 px-6 space-y-8 bg-[#F5F5F7]">
-            
-            {/* 1. Risk Scoring Overview */}
-            <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-200/60">
-              <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span className="bg-slate-900 text-white w-6 h-6 rounded-md flex items-center justify-center text-xs font-mono">1</span>
-                Risk Puanlama Sistemi
-              </h3>
-              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                Kaçak Analiz Programı, hibrit bir puanlama motoru kullanır. Her abone 0 puandan başlar ve tespit edilen her şüpheli durum için kümülatif ceza puanı alır. Puan 100'e sabitlenir.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-red-50/50 border border-red-100 rounded-xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-red-600 font-bold text-sm">Seviye 1 (Kritik)</span>
-                            <span className="text-xs font-mono font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded">80+ Puan</span>
-                        </div>
-                        <p className="text-xs text-slate-500 leading-snug">
-                            Birden fazla kaçak belirtisi (örn. hem referans listesinde hem de tüketim anomalisi) gösteren, acil müdahale gerektiren aboneler.
-                        </p>
-                      </div>
-                  </div>
+          <div className="max-w-5xl mx-auto py-10 px-6 space-y-10">
 
-                  <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
-                       <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-orange-600 font-bold text-sm">Seviye 2 (Yüksek)</span>
-                            <span className="text-xs font-mono font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded">50-79 Puan</span>
+            {/* 1. DATA FLOW VISUALIZATION */}
+            <section>
+                <div className="flex items-center gap-2 mb-6">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold">1</span>
+                    <h3 className="text-lg font-bold text-slate-800">Veri İşleme Hattı</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Step 1 */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-blue-300 transition-colors">
+                        <div className="absolute top-1/2 -right-3 w-6 h-6 bg-white border-r border-t border-slate-200 transform rotate-45 z-10 hidden md:block group-hover:border-blue-300"></div>
+                        <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4">
+                            <FileSpreadsheet className="h-6 w-6 text-green-600" />
                         </div>
-                        <p className="text-xs text-slate-500 leading-snug">
-                            Belirgin bir anomali (örn. 120 kuralı ihlali veya bypass şüphesi) tespit edilen, öncelikli incelenmesi gereken grup.
+                        <h4 className="font-bold text-slate-800 mb-1">Veri Girişi</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                            Excel formatındaki Referans (Kara Liste) ve Tüketim verileri sisteme yüklenir. Karakter hataları ve format bozuklukları otomatik temizlenir.
                         </p>
-                      </div>
-                  </div>
+                    </div>
 
-                  <div className="p-4 bg-yellow-50/50 border border-yellow-100 rounded-xl relative overflow-hidden group">
-                       <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/5 rounded-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
-                       <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-yellow-600 font-bold text-sm">Seviye 3 (Orta)</span>
-                            <span className="text-xs font-mono font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">25-49 Puan</span>
+                    {/* Step 2 */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-blue-300 transition-colors">
+                         <div className="absolute top-1/2 -right-3 w-6 h-6 bg-white border-r border-t border-slate-200 transform rotate-45 z-10 hidden md:block group-hover:border-blue-300"></div>
+                        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+                            <ScanSearch className="h-6 w-6 text-blue-600" />
                         </div>
-                        <p className="text-xs text-slate-500 leading-snug">
-                            Mevsimsel tutarsızlıklar, trend bozuklukları veya şüpheli düşüşler gösteren potansiyel risk grubu.
+                        <h4 className="font-bold text-slate-800 mb-1">Analiz Motoru</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                            Milyonlarca veri satırı, tanımlı 6 farklı risk algoritması ile taranır. Her abone için 0-100 arası dinamik bir <strong>Risk Skoru</strong> hesaplanır.
                         </p>
-                      </div>
-                  </div>
-              </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-purple-300 transition-colors">
+                        <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
+                            <BrainCircuit className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <h4 className="font-bold text-slate-800 mb-1">Yapay Zeka Raporu</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                            İstatistiksel sonuçlar Google Gemini AI modeline gönderilir. Yönetici için stratejik, doğal dilde yazılmış özet rapor oluşturulur.
+                        </p>
+                    </div>
+                </div>
             </section>
 
-            {/* 2. Detailed Algorithms */}
-            <div className="grid grid-cols-1 gap-6">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span className="bg-slate-900 text-white w-6 h-6 rounded-md flex items-center justify-center text-xs font-mono">2</span>
-                    Tespit Algoritmaları
-                </h3>
+            {/* 2. ALGORITHMS GRID */}
+            <section>
+                <div className="flex items-center gap-2 mb-6">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold">2</span>
+                    <h3 className="text-lg font-bold text-slate-800">Tespit Algoritmaları</h3>
+                </div>
 
-                {/* Algo: Reference */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center shrink-0">
-                        <ShieldCheck className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="font-bold text-slate-800 text-base mb-2">Referans Kontrolü (Kara Liste)</h4>
-                        <p className="text-sm text-slate-600 mb-4">
-                            Sistem, yüklenen "Referans Listesi" (Dosya A) ile güncel tüketim verilerini (Dosya B) çapraz sorgular.
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    
+                    {/* Card: Reference */}
+                    <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <ShieldCheck className="h-5 w-5 text-red-600" />
+                            </div>
+                            <span className="bg-red-50 text-red-700 text-[10px] font-bold px-2 py-1 rounded-full">+50 Puan</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">Referans Kontrolü</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Abone adı, TC kimlik no veya sayaç numarası daha önce "Kaçak" olarak işaretlenmiş listede var mı?
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                <div className="text-xs font-bold text-slate-500 uppercase mb-1">Muhatap Eşleşmesi</div>
-                                <div className="text-sm font-semibold text-slate-800">
-                                    Kişi (TC/Muhatap No) daha önce kaçak yapmışsa. <span className="text-green-600 ml-1">+50 Puan</span>
-                                </div>
-                             </div>
-                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                <div className="text-xs font-bold text-slate-500 uppercase mb-1">Tesisat Eşleşmesi</div>
-                                <div className="text-sm font-semibold text-slate-800">
-                                    Adres/Sayaç geçmişte işlem görmüşse (Abone değişse bile). <span className="text-green-600 ml-1">+20 Puan</span>
-                                </div>
-                             </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 w-[80%]"></div>
+                        </div>
+                    </div>
+
+                    {/* Card: Bypass */}
+                    <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Zap className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <span className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full">+30 Puan</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">Müdahale (Bypass)</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Kış tüketimi olmasına rağmen Yaz tüketimine oranı çok düşük. (Isınma Katsayısı &lt; 3.5 ise şüpheli).
+                        </p>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-orange-500 w-[60%]"></div>
+                        </div>
+                    </div>
+
+                    {/* Card: Building Analysis */}
+                    <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Building2 className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full">Dinamik</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">Bina/Komşu Analizi</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Aynı binadaki komşuların ortalamasından %60 daha az tüketen daireleri tespit eder.
+                        </p>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 w-[50%]"></div>
+                        </div>
+                    </div>
+
+                    {/* Card: Rule 120 */}
+                    <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <ThermometerSnowflake className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">+45 Puan</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">120 sm³ Kuralı</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Ocak, Şubat ve Mart aylarının her birinde 25 ile 110 sm³ arasında (ısınmıyor ama kullanıyor) kalanlar.
+                        </p>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 w-[70%]"></div>
+                        </div>
+                    </div>
+
+                     {/* Card: Inconsistency */}
+                     <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <TrendingDown className="h-5 w-5 text-pink-600" />
+                            </div>
+                            <span className="bg-pink-50 text-pink-700 text-[10px] font-bold px-2 py-1 rounded-full">+20 Puan</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">Tutarsız Trend</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Ani tüketim düşüşleri, düz çizgi (sabit endeks) veya aşırı dalgalı (ZigZag) profiller.
+                        </p>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 w-[40%]"></div>
+                        </div>
+                    </div>
+
+                    {/* Card: Geo Risk */}
+                    <div className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-apple hover:shadow-lg transition-all group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <MapPin className="h-5 w-5 text-red-600" />
+                            </div>
+                            <span className="bg-red-50 text-red-700 text-[10px] font-bold px-2 py-1 rounded-full">+15 Puan</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800">Sıcak Bölgeler</h4>
+                        <p className="text-xs text-slate-500 mt-2 mb-3">
+                            Bilinen kaçak noktalarına 10 metreden daha yakın olan ve tüketimi şüpheli sınırda gezen aboneler.
+                        </p>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 w-[30%]"></div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                {/* Algo: Tampering (Bypass) */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                        <Zap className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-slate-800 text-base mb-2">Müdahale ve Bypass Analizi</h4>
-                             <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded">+30 Puan</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-4">
-                            Abone kışın aktif kullanım yapıyor görünmesine rağmen (Min. Tüketim &gt; 30), Yaz ve Kış tüketimi arasında beklenen katlanma gerçekleşmiyorsa <strong>sayaç bypass edilmiş</strong> olabilir.
-                        </p>
-                        <div className="bg-slate-900 rounded-xl p-4 text-slate-300 text-xs font-mono overflow-x-auto">
-                            <div className="mb-1 text-slate-500">// Formül</div>
-                            <div>Isınma_Katsayısı = (Ocak + Şubat + Mart) / (Haziran + Temmuz + Ağustos)</div>
-                            <div className="mt-2 text-orange-400">IF (Kış_Ort &gt; 30) AND (Isınma_Katsayısı &lt; 3.5) THEN "Şüpheli"</div>
-                        </div>
-                    </div>
-                </div>
-
-                 {/* Algo: Rule 120 */}
-                 <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <ThermometerSnowflake className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-slate-800 text-base mb-2">120 sm³ Kuralı (Düşük Tüketim)</h4>
-                             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">+30-45 Puan</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-4">
-                            Yönetmelik gereği ve istatistiksel olarak bir konutun kışın aktif olup ısınmama (sadece ocak/şofben kullanımı) sınırı analiz edilir.
-                        </p>
-                        <ul className="space-y-2">
-                            <li className="flex items-start gap-2 text-sm text-slate-700">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                                <span><strong>Kriter:</strong> Ocak, Şubat ve Mart aylarının <span className="underline decoration-blue-300">her üçünde de</span> tüketim <strong>25 sm³ ile 110 sm³</strong> arasındaysa.</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-slate-700">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                                <span><strong>Neden 25 altı değil?</strong> 0-25 sm³ arası genellikle boş ev veya tatile gitmiş abonedir. Kaçak riski düşüktür.</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-slate-700">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                                <span><strong>Neden 110 üstü değil?</strong> 110 sm³ üzeri tüketim, minimum ısınma şartlarını sağlayan normal aboneleri temsil eder.</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                {/* Algo: Building Analysis */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6 ring-2 ring-indigo-50">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Building2 className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-slate-800 text-base mb-2">Bina/Komşu Kıyaslaması (Yeni)</h4>
-                             <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Özel Modül</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-4">
-                            Coğrafi koordinatları (Enlem/Boylam) birebir aynı olan aboneler "Aynı Bina" kabul edilir. Bina içerisindeki tüketim davranışı modellenir.
-                        </p>
-                        <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 marker:text-indigo-600 marker:font-bold">
-                            <li><strong>Temiz Referans Grubu:</strong> Binada kış aylarında düzenli tüketim yapan (her ay &gt; 25 sm³) komşular belirlenir. En az 8 temiz komşu şartı aranır.</li>
-                            <li><strong>Medyan Hesaplama:</strong> Temiz komşuların kış ortalamasının medyanı (orta noktası) alınır.</li>
-                            <li><strong>Sapma Tespiti:</strong> Eğer bir abonenin tüketimi, bina medyanının <strong>%60'ından daha düşükse</strong> şüpheli olarak işaretlenir.</li>
-                        </ol>
-                        <div className="mt-4 p-3 bg-indigo-50 rounded-lg text-xs text-indigo-800 flex items-center gap-2">
-                             <Scale className="h-4 w-4" />
-                             <span>Örnek: Bina Ortalaması 100 m³ iken 35 m³ tüketen daire (-%65 sapma) tespit edilir.</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Algo: Inconsistency */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center shrink-0">
-                        <TrendingDown className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-slate-800 text-base mb-2">Tutarsızlık ve Trend Analizi</h4>
-                             <span className="text-xs font-bold bg-pink-100 text-pink-700 px-2 py-1 rounded">+20-25 Puan</span>
-                        </div>
-                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="text-xs font-bold text-slate-600 mb-1">Düz Çizgi</div>
-                                <p className="text-[10px] text-slate-500">Tüketimin kışın standart sapması sıfıra yakınsa (sabit endeks/müdahale).</p>
+             {/* 3. AI INTEGRATION */}
+             <section>
+                <div className="bg-gradient-to-br from-[#1E293B] to-[#0F172A] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl">
+                    {/* Abstract Background Shapes */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                         <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/10 shrink-0">
+                            <BrainCircuit className="h-12 w-12 text-blue-300" />
+                         </div>
+                         <div className="flex-1 text-center md:text-left">
+                             <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                                 <Lightbulb className="h-5 w-5 text-yellow-400" />
+                                 <h3 className="text-xl font-bold">Yapay Zeka Destekli Karar Mekanizması</h3>
                              </div>
-                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="text-xs font-bold text-slate-600 mb-1">Ani Düşüş</div>
-                                <p className="text-[10px] text-slate-500">Trend eğimi (Slope) negatif yönde sert kırılıyorsa.</p>
-                             </div>
-                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="text-xs font-bold text-slate-600 mb-1">ZigZag</div>
-                                <p className="text-[10px] text-slate-500">Bir ay yüksek, bir ay düşük (Volatilite skoru yüksek).</p>
+                             <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                                 Sistem sadece matematiksel hesaplama yapmaz; <strong>Google Gemini</strong> modeli, üretilen tüm istatistikleri okuyarak bir "Fraud Analyst" gibi davranır. 
+                                 Sayısal verileri (Örn: "25 adet bypass şüphesi") yorumlar ve operasyon ekiplerine "Şu bölgedeki ticari abonelere odaklanın" gibi stratejik tavsiyeler verir.
+                             </p>
+                             <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                                 <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs font-medium flex items-center gap-2">
+                                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                     Doğal Dil İşleme
+                                 </div>
+                                 <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs font-medium flex items-center gap-2">
+                                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                     Örüntü Tanıma
+                                 </div>
+                                 <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-xs font-medium flex items-center gap-2">
+                                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                     Otomatik Raporlama
+                                 </div>
                              </div>
                          </div>
                     </div>
                 </div>
-
-                {/* Algo: Geo Risk */}
-                <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6">
-                    <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-                        <MapPin className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-slate-800 text-base mb-2">Coğrafi Risk (Hotspot)</h4>
-                             <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded">+10-15 Puan</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-3">
-                             Sistem, kesinleşmiş kaçak vakalarının (Referans Listesi) veya çok yüksek riskli abonelerin (80+ Puan) coğrafi konumlarını haritalandırır.
-                        </p>
-                        <p className="text-sm text-slate-600">
-                             Eğer "sınırda kalan" (örn. düşük tüketimli) bir abone, bilinen bir kaçak noktasına <strong>10 metreden daha yakınsa</strong>, bölgesel risk puanı eklenerek önceliklendirilir. Bu yöntem, kaçak kullanımın yaygın olduğu sokakları veya bina kümelerini ortaya çıkarır.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* 3. AI Section */}
-             <section className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-[24px] text-white shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm shrink-0">
-                         <BrainCircuit className="h-8 w-8 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold mb-2">Yapay Zeka Entegrasyonu (Gemini 3 Flash)</h3>
-                        <p className="text-sm text-indigo-100 leading-relaxed opacity-90">
-                            İstatistiksel motorun ürettiği tüm sayısal veriler ve risk profilleri, Google Gemini AI modeline gönderilir. 
-                            Yapay zeka, bu verileri yorumlayarak yöneticiler için "Hangi bölgeye gidilmeli?", "Hangi kaçak türü artışta?" gibi stratejik sorulara yanıt veren, doğal dilde yazılmış özet raporlar oluşturur.
-                        </p>
-                    </div>
-                </div>
-            </section>
+             </section>
 
           </div>
         </div>
         
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0 z-20">
+        <div className="p-5 border-t border-slate-100 bg-white flex justify-end shrink-0 z-20">
             <button 
                 onClick={onClose}
-                className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10 active:scale-95"
+                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95 flex items-center gap-2"
             >
                 Anlaşıldı, Kapat
+                <ArrowRight className="h-4 w-4" />
             </button>
         </div>
       </div>
