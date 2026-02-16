@@ -18,6 +18,7 @@ export interface MonthlyData {
 export interface Subscriber {
   tesisatNo: string;
   muhatapNo: string; 
+  baglantiNesnesi?: string; // ADDED
   relatedMuhatapNos: string[]; 
   address: string; // Still kept for display if available
   location: {
@@ -42,6 +43,7 @@ export interface ReferenceLocation {
 export interface RiskScore {
   tesisatNo: string;
   muhatapNo: string;
+  baglantiNesnesi?: string; // ADDED
   address: string;
   location: {
     lat: number;
@@ -85,6 +87,7 @@ export interface RiskScore {
 // NEW: Interface for Building Consumption Analysis
 export interface BuildingRisk {
   tesisatNo: string;
+  baglantiNesnesi?: string; // ADDED
   aboneTipi: string;
   location: { lat: number, lng: number };
   personalWinterAvg: number;

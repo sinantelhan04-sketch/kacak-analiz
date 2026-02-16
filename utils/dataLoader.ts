@@ -189,6 +189,7 @@ export const processFiles = async (
         const headers = normalizeRowData(rows[0]);
         const idxId = getColIndex(headers, ['tesisat no', 'tesisat', 'tesisatno']);
         const idxMuhatap = getColIndex(headers, ['muhatap no', 'muhatap', 'muhatapno']);
+        const idxBaglanti = getColIndex(headers, ['baglanti nesnesi', 'bağlantı nesnesi', 'baglanti', 'bağlantı', 'baglanti_nesnesi', 'bağlantı_nesnesi', 'baglantinesnesi', 'bağlantınesnesi']);
         const idxType = getColIndex(headers, ['abone tipi', 'tip', 'abone', 'abonetipi']);
         const idxLat = getColIndex(headers, ['enlem', 'lat', 'latitude']);
         const idxLng = getColIndex(headers, ['boylam', 'lng', 'long', 'longitude']);
@@ -228,9 +229,12 @@ export const processFiles = async (
                 let typeStr = rawTypeStr.toLowerCase();
                 const isCommercial = typeStr.includes('ticar') || typeStr.includes('resmi') || typeStr.includes('sanayi');
                 const initMuhatap = idxMuhatap !== -1 ? cleanVal(row[idxMuhatap]) : `M-${rawId}`;
+                const baglantiVal = idxBaglanti !== -1 ? cleanVal(row[idxBaglanti]) : '';
 
                 subscriberMap.set(id, {
-                    tesisatNo: rawId, muhatapNo: initMuhatap, relatedMuhatapNos: [initMuhatap],
+                    tesisatNo: rawId, muhatapNo: initMuhatap, 
+                    baglantiNesnesi: baglantiVal,
+                    relatedMuhatapNos: [initMuhatap],
                     address: '', 
                     location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
                     city: idxCity !== -1 ? cleanVal(row[idxCity]) : '',

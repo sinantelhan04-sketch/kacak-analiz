@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { TrendingDown, GraduationCap, Filter, AlertOctagon, Activity, ChevronDown, Download } from 'lucide-react';
@@ -33,6 +34,7 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
     const exportData = filteredData.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
+        "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
         "Tutarsızlık Detayı": row.inconsistentData.dropDetails.join(' | '),
         "Sinyal Türü": row.inconsistentData.isSemesterSuspect && !row.inconsistentData.hasWinterDrop 

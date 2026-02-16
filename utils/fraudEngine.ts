@@ -1,4 +1,5 @@
 
+
 import { Subscriber, RiskScore, BuildingRisk } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
@@ -145,17 +146,16 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
         return type.includes('konut') && type.includes('kombi');
     });
 
-    // 2. Gruplama: Enlem ve Boylam TAMAMEN aynı olanlar (Noktadan sonraki tüm basamaklar dahil)
+    // 2. Gruplama: Bağlantı Nesnesi aynı olanlar
+    // Eski Logic: Koordinat (lat_lng) kullanıyordu.
+    // Yeni Logic: Bağlantı Nesnesi sütununu kullanır.
     const buildingMap = new Map<string, Subscriber[]>();
     
     validSubscribers.forEach(sub => {
-        // Lat/Lng kontrolü: 0 veya boş (undefined/null) değerler atlanmalı.
-        // Excel parsing sırasında boş hücreler 0 olarak dönebilir, bu yüzden 0 kontrolü de şart.
-        if (!sub.location.lat || !sub.location.lng || sub.location.lat === 0 || sub.location.lng === 0) return;
+        // Bağlantı nesnesi olmayanları atla
+        if (!sub.baglantiNesnesi || sub.baglantiNesnesi.trim() === '' || sub.baglantiNesnesi === '-') return;
 
-        // Sayısal değerin string karşılığını kullanarak tam eşleşme yapıyoruz.
-        // Bu sayede excel'den gelen tüm basamak hassasiyeti korunur (Floating point precision).
-        const key = `${sub.location.lat}_${sub.location.lng}`;
+        const key = sub.baglantiNesnesi.trim();
         
         if (!buildingMap.has(key)) buildingMap.set(key, []);
         buildingMap.get(key)!.push(sub);
@@ -212,6 +212,7 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
 
                 buildingRisks.push({
                     tesisatNo: s.tesisatNo,
+                    baglantiNesnesi: s.baglantiNesnesi,
                     aboneTipi: s.rawAboneTipi || s.aboneTipi,
                     location: s.location,
                     personalWinterAvg: parseFloat(personalAvg.toFixed(1)),
@@ -253,6 +254,7 @@ export const createBaseRiskScore = (
     const baseScore: RiskScore = {
         tesisatNo: sub.tesisatNo,
         muhatapNo: sub.muhatapNo,
+        baglantiNesnesi: sub.baglantiNesnesi,
         address: sub.address,
         location: sub.location,
         city: sub.city || 'Bilinmiyor',
@@ -503,11 +505,13 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     const isCommercial = Math.random() < 0.15;
     const district = districtNames[i % districtNames.length];
     
+    let bn = `BN-${id}`;
     // Make sure some people live in the same building for demo purposes
     // Every 5th person shares location with 4th person
     let loc = getRandomPointInDistrict(district);
     if (i > 5 && i % 5 !== 0) {
         loc = subscribers[i-1].location;
+        bn = subscribers[i-1].baglantiNesnesi || `BN-${id}`; // Share BN to simulate building
     }
 
     let data = {
@@ -555,6 +559,7 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     subscribers.push({
       tesisatNo: tesisatNo,
       muhatapNo: muhatapNo,
+      baglantiNesnesi: bn,
       relatedMuhatapNos: relatedMuhatapNos,
       address: `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`,
       location: loc,

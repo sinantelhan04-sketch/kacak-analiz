@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { AlertTriangle, MapPin, User, Building2, ThermometerSnowflake, Wrench, Activity, Ban, ChevronDown } from 'lucide-react';
@@ -89,6 +90,7 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                         <div className="flex flex-col">
                             <span className="font-semibold text-[#1D1D1F] text-sm tracking-tight">{row.tesisatNo}</span>
                             <span className="text-xs text-[#86868B] font-medium">{row.muhatapNo}</span>
+                            {row.baglantiNesnesi && <span className="text-[10px] text-slate-400 mt-0.5">BN: {row.baglantiNesnesi}</span>}
                         </div>
                     </div>
                 </td>

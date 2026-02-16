@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { BuildingRisk } from '../types';
 import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users } from 'lucide-react';
@@ -23,6 +24,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
   const handleExport = () => {
     const exportData = data.map(row => ({
         "Tesisat No": row.tesisatNo,
+        "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.aboneTipi,
         "Abone Kış Ort. (m3)": row.personalWinterAvg,
         "Bina Kış Medyan (m3)": row.buildingWinterMedian,
@@ -68,7 +70,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
                 Filtre: Bina Ortalamasının %60 Altında Kalanlar
              </span>
              <span className="text-[9px] text-slate-500">
-                Aynı koordinat, en az 8 temiz (Oca-Mar {'>'} 25) komşu şartı.
+                Aynı Bağlantı Nesnesi, en az 8 temiz (Oca-Mar {'>'} 25) komşu şartı.
              </span>
         </div>
       </div>
@@ -81,7 +83,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
               <th className="px-6 py-4">Kış Ort. (Abone vs Bina)</th>
               <th className="px-6 py-4">Sapma (%)</th>
               <th className="px-6 py-4">Aylık Detay (Oca/Şub/Mar)</th>
-              <th className="px-6 py-4">Konum & Bina</th>
+              <th className="px-6 py-4">Bina & Bağlantı</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-indigo-50">
@@ -137,8 +139,12 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
                 <td className="px-6 py-4">
                   <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3 w-3 text-indigo-400" />
-                          <span className="font-mono text-xs text-slate-600">{row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}</span>
+                          <Building2 className="h-3 w-3 text-indigo-400" />
+                          <span className="font-mono text-xs text-slate-700 font-bold">{row.baglantiNesnesi}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
+                          <MapPin className="h-3 w-3 text-slate-400" />
+                          <span className="font-mono text-[10px] text-slate-500">{row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}</span>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
                           <Users className="h-3 w-3 text-indigo-400" />
@@ -168,7 +174,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
                         <div className="flex flex-col items-center justify-center gap-2">
                             <Building2 className="h-8 w-8 text-indigo-200" />
                             <p>Bina geneline göre anormal düşük tüketen abone bulunamadı.</p>
-                            <p className="text-xs text-slate-400 max-w-md">Not: Analiz sadece aynı koordinatta (tam eşleşme) en az 8 adet düzenli tüketen (Oca-Şub-Mar {'>'} 25) komşusu olan binalar için yapılır.</p>
+                            <p className="text-xs text-slate-400 max-w-md">Not: Analiz sadece aynı "Bağlantı Nesnesi" altında en az 8 adet düzenli tüketen (Oca-Şub-Mar {'>'} 25) komşusu olan binalar için yapılır.</p>
                         </div>
                     </td>
                 </tr>

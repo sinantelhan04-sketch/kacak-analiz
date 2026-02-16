@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download } from 'lucide-react';
@@ -26,6 +27,7 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
     const exportData = sortedData.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
+        "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
         "Yaz Ortalaması (m3)": row.seasonalStats.summerAvg,
         "Kış Ortalaması (m3)": row.seasonalStats.winterAvg,

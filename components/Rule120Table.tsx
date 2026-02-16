@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download } from 'lucide-react';
@@ -24,6 +25,7 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
     const exportData = data.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
+        "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
         "Ocak (m3)": row.rule120Data?.jan,
         "Şubat (m3)": row.rule120Data?.feb,
