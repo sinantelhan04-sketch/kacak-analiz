@@ -19,34 +19,34 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
 
   const visibleData = data.slice(0, visibleCount);
 
-  // Helper to determine badge style
+  // Helper to determine badge style (Apple Chips style)
   const renderReasonBadge = (reason: string, row: RiskScore) => {
-    let style = "bg-slate-100 text-slate-600 border-slate-200";
+    let style = "bg-[#F5F5F7] text-apple-subtext";
     let icon = null;
 
     if (reason.includes('MUHATAP') || reason.includes('Kara Liste')) {
-      style = "bg-red-50 text-red-600 border-red-100";
+      style = "bg-apple-red/10 text-apple-red";
       icon = <Ban className="h-3 w-3 mr-1" />;
     } 
     else if (reason.includes('Geçmiş Müdahale')) {
-      style = "bg-red-50 text-red-500 border-red-100";
+      style = "bg-apple-red/10 text-apple-red";
       icon = <Wrench className="h-3 w-3 mr-1" />;
     }
     else if (reason.includes('120 Kuralı')) {
-      style = "bg-blue-50 text-blue-600 border-blue-100";
+      style = "bg-apple-blue/10 text-apple-blue";
       icon = <ThermometerSnowflake className="h-3 w-3 mr-1" />;
     }
     else if (reason.includes('Mevsimsel') || reason.includes('Bypass')) {
-      style = "bg-orange-50 text-orange-600 border-orange-100";
+      style = "bg-apple-orange/10 text-apple-orange";
       icon = <Activity className="h-3 w-3 mr-1" />;
     }
     else if (reason.includes('Konum') || reason.includes('Bölgesel')) {
-      style = "bg-purple-50 text-purple-600 border-purple-100";
+      style = "bg-apple-purple/10 text-apple-purple";
       icon = <MapPin className="h-3 w-3 mr-1" />;
     }
 
     return (
-        <div className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium mr-1 mb-1 border ${style}`}>
+        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold mr-1.5 mb-1.5 ${style}`}>
             {icon}
             <span>{reason}</span>
         </div>
@@ -55,60 +55,60 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-20">
+      {/* Frosted Header */}
+      <div className="px-8 py-5 flex justify-between items-center bg-white/80 backdrop-blur-xl sticky top-0 z-20 border-b border-[#F5F5F7]">
         <div>
-            <h3 className="font-bold text-slate-800 text-lg">Riskli Abone Listesi</h3>
-            <p className="text-xs text-slate-500">Analiz edilen {data.length} kayıt</p>
+            <h3 className="font-semibold text-[#1D1D1F] text-xl tracking-tight">Riskli Abone Listesi</h3>
+            <p className="text-xs text-[#86868B] font-medium mt-0.5">Analiz edilen {data.length} kayıt</p>
         </div>
       </div>
       
       <div className="overflow-auto flex-1 custom-scrollbar">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10 shadow-sm">
+          <thead className="bg-[#F5F5F7]/50 text-[#86868B] uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10 backdrop-blur-sm">
             <tr>
-              <th className="px-6 py-3 border-b border-slate-200">#</th>
-              <th className="px-6 py-3 border-b border-slate-200">Abone Bilgisi</th>
-              <th className="px-6 py-3 border-b border-slate-200">Konum</th>
-              <th className="px-6 py-3 border-b border-slate-200">Risk Puanı</th>
-              <th className="px-6 py-3 border-b border-slate-200">Tespit Detayları</th>
-              <th className="px-6 py-3 border-b border-slate-200">Durum</th>
+              <th className="px-8 py-3">#</th>
+              <th className="px-6 py-3">Abone Bilgisi</th>
+              <th className="px-6 py-3">Konum</th>
+              <th className="px-6 py-3">Risk Puanı</th>
+              <th className="px-6 py-3">Tespit Detayları</th>
+              <th className="px-6 py-3">Durum</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[#F5F5F7]">
             {visibleData.map((row, index) => (
-              <tr key={row.tesisatNo} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-3 font-mono text-slate-400 text-xs w-16">
+              <tr key={row.tesisatNo} className="hover:bg-[#F5F5F7]/50 transition-colors">
+                <td className="px-8 py-4 font-mono text-[#86868B] text-xs w-16">
                     {index + 1}
                 </td>
-                <td className="px-6 py-3">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${row.aboneTipi === 'Commercial' ? 'bg-orange-50 border-orange-100 text-orange-600' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
-                            {row.aboneTipi === 'Commercial' ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${row.aboneTipi === 'Commercial' ? 'bg-apple-orange/10 text-apple-orange' : 'bg-apple-blue/10 text-apple-blue'}`}>
+                            {row.aboneTipi === 'Commercial' ? <Building2 className="h-5 w-5" /> : <User className="h-5 w-5" />}
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-bold text-slate-800 text-sm font-mono">{row.tesisatNo}</span>
-                            <span className="text-xs text-slate-500 font-mono">{row.muhatapNo}</span>
+                            <span className="font-semibold text-[#1D1D1F] text-sm tracking-tight">{row.tesisatNo}</span>
+                            <span className="text-xs text-[#86868B] font-medium">{row.muhatapNo}</span>
                         </div>
                     </div>
                 </td>
-                <td className="px-6 py-3">
+                <td className="px-6 py-4">
                   {row.location.lat !== 0 ? (
-                      <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                      <span className="text-xs font-medium text-[#86868B] bg-[#F5F5F7] px-2 py-1 rounded-lg">
                           {row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}
                       </span>
                   ) : (
-                      <span className="text-xs text-slate-300">—</span>
+                      <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
-                <td className="px-6 py-3">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${row.totalScore >= 80 ? 'bg-red-500' : row.totalScore >= 50 ? 'bg-orange-500' : 'bg-yellow-500'}`}></div>
-                        <span className="text-sm font-bold text-slate-700">{row.totalScore}</span>
+                <td className="px-6 py-4">
+                    <div className="flex items-center gap-2.5">
+                        <div className={`w-2.5 h-2.5 rounded-full ${row.totalScore >= 80 ? 'bg-apple-red shadow-[0_0_8px_rgba(255,59,48,0.4)]' : row.totalScore >= 50 ? 'bg-apple-orange' : 'bg-yellow-400'}`}></div>
+                        <span className="text-lg font-semibold text-[#1D1D1F]">{row.totalScore}</span>
                     </div>
                 </td>
-                <td className="px-6 py-3 max-w-xs">
-                  <div className="flex flex-wrap">
+                <td className="px-6 py-4 max-w-sm">
+                  <div className="flex flex-wrap pt-1">
                     {row.reason.split(', ').map((r, i) => (
                         <React.Fragment key={i}>
                             {renderReasonBadge(r, row)}
@@ -116,11 +116,11 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border
-                    ${row.riskLevel.includes('Seviye 1') ? 'bg-red-50 text-red-700 border-red-100' : 
-                      row.riskLevel.includes('Seviye 2') ? 'bg-orange-50 text-orange-700 border-orange-100' : 
-                      'bg-yellow-50 text-yellow-700 border-yellow-100'}`}>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide
+                    ${row.riskLevel.includes('Seviye 1') ? 'bg-apple-red text-white shadow-sm' : 
+                      row.riskLevel.includes('Seviye 2') ? 'bg-apple-orange/10 text-apple-orange' : 
+                      'bg-yellow-400/10 text-yellow-600'}`}>
                     {row.riskLevel.split('(')[0].trim()}
                   </span>
                 </td>
@@ -129,10 +129,10 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
             
             {visibleCount < data.length && (
                 <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center">
+                    <td colSpan={6} className="px-6 py-6 text-center">
                         <button 
                             onClick={handleShowMore}
-                            className="text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
+                            className="text-xs font-semibold text-[#1D1D1F] bg-[#F5F5F7] hover:bg-gray-200 px-6 py-2.5 rounded-full transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
                             Daha Fazla Göster
                             <ChevronDown className="h-3 w-3" />
@@ -143,10 +143,10 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
             
             {data.length === 0 && (
                 <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                             <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center">
-                                <AlertTriangle className="h-5 w-5 text-slate-300" />
+                    <td colSpan={6} className="px-6 py-20 text-center text-[#86868B]">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                             <div className="w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center">
+                                <AlertTriangle className="h-8 w-8 text-gray-400" />
                              </div>
                              <p className="font-medium text-sm">Kayıt bulunamadı.</p>
                         </div>

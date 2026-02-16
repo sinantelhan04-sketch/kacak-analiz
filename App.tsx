@@ -333,7 +333,7 @@ const App: React.FC = () => {
       return filtered.length > 0 ? filtered[0] : null;
   };
 
-  // -- Analysis Starter Component --
+  // -- Analysis Starter Component (Apple Style) --
   const AnalysisStarter = ({ 
       title, 
       desc, 
@@ -341,17 +341,17 @@ const App: React.FC = () => {
       color, 
       moduleName 
   }: { title: string, desc: string, icon: any, color: string, moduleName: keyof AnalysisStatus }) => (
-      <div className="h-full flex flex-col items-center justify-center bg-white rounded-xl border border-slate-200 p-8 text-center hover:shadow-md transition-shadow">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-5 ${color} bg-opacity-10 border border-slate-100`}>
-              <Icon className={`h-8 w-8 ${color.replace('bg-', 'text-')}`} />
+      <div className="h-full flex flex-col items-center justify-center bg-white rounded-[32px] shadow-apple p-12 text-center transition-all duration-300 hover:shadow-apple-hover border border-white/50">
+          <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center mb-6 ${color} bg-opacity-10`}>
+              <Icon className={`h-10 w-10 ${color.replace('bg-', 'text-')}`} strokeWidth={1.5} />
           </div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">{title}</h2>
-          <p className="text-slate-500 max-w-sm mb-6 text-sm">{desc}</p>
+          <h2 className="text-2xl font-bold text-[#1D1D1F] mb-3 tracking-tight">{title}</h2>
+          <p className="text-[#86868B] max-w-md mb-8 text-base leading-relaxed">{desc}</p>
           <button 
               onClick={() => handleRunModuleAnalysis(moduleName)}
               disabled={!!runningAnalysis}
-              className={`px-6 py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow flex items-center gap-2 transition-all
-                  bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`px-8 py-4 rounded-full font-semibold text-white shadow-lg flex items-center gap-2.5 transition-all active:scale-95
+                  bg-[#1D1D1F] hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
           >
               {runningAnalysis === moduleName ? (
                   <>
@@ -369,76 +369,82 @@ const App: React.FC = () => {
   // --- VIEW RENDER ---
   if (appStage === 'setup') {
      return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col items-center justify-center p-6 font-sans">
             
-            <div className="flex flex-col items-center justify-center w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 p-10">
+            <div className="flex flex-col items-center justify-center w-full max-w-4xl bg-white rounded-[40px] shadow-2xl p-16 relative overflow-hidden">
+                 {/* Decorative blurred blobs */}
+                 <div className="absolute top-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl -ml-20 -mt-20"></div>
+                 <div className="absolute bottom-0 right-0 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl -mr-20 -mb-20"></div>
+
                  {/* Error Msg */}
                  {validationError && (
-                    <div className="w-full mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between gap-3">
+                    <div className="w-full mb-8 p-4 bg-red-50/50 border border-red-100 rounded-2xl flex items-center justify-between gap-3 animate-slide-up backdrop-blur-sm">
                         <div className="flex items-center gap-3">
-                            <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                            </div>
                             <p className="text-sm font-medium text-red-700">{validationError}</p>
                         </div>
                         <button onClick={() => setValidationError(null)} className="text-slate-400 hover:text-slate-600"><XCircle className="h-5 w-5" /></button>
                     </div>
                 )}
                 
-                <div className="text-center mb-10">
-                     <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="bg-primary-50 rounded-xl p-3 border border-primary-100">
-                            <ShieldCheck className="h-10 w-10 text-primary-600" />
+                <div className="text-center mb-12 relative z-10">
+                     <div className="flex items-center justify-center gap-3 mb-5">
+                        <div className="bg-[#1D1D1F] rounded-[20px] p-4 shadow-xl">
+                            <ShieldCheck className="h-10 w-10 text-white" strokeWidth={1.5} />
                         </div>
                     </div>
-                    <h1 className="font-bold text-3xl text-slate-900 mb-2 tracking-tight">
-                        Kaçak<span className="text-primary-600">Kontrol</span> Pro
+                    <h1 className="font-bold text-4xl text-[#1D1D1F] mb-3 tracking-tighter">
+                        Kaçak Kontrol Pro
                     </h1>
-                    <p className="text-slate-500 text-lg">
-                        Yüksek performanslı veri analiz platformu.
+                    <p className="text-[#86868B] text-lg font-medium">
+                        Yeni nesil fraud analiz ve tespit platformu.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-10 relative z-10">
                     <div 
                         onClick={() => fileInputRefA.current?.click()}
-                        className={`group relative h-60 bg-slate-50 rounded-xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden
-                        ${files.a ? 'border-green-400 bg-green-50' : 'border-slate-300 hover:border-primary-500 hover:bg-white'}`}
+                        className={`group relative h-64 bg-[#F5F5F7] rounded-[30px] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden hover:scale-[1.02] duration-300
+                        ${files.a ? 'border-apple-green bg-green-50/30' : 'border-gray-200 hover:border-apple-blue hover:bg-white hover:shadow-xl'}`}
                     >
                         <input type="file" ref={fileInputRefA} onChange={(e) => handleFileSelect('a', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all ${files.a ? 'bg-green-500 text-white' : 'bg-white text-slate-400 border border-slate-200 group-hover:text-primary-600'}`}>
-                            {files.a ? <CheckCircle className="h-8 w-8" /> : <UploadCloud className="h-8 w-8" />}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all shadow-sm ${files.a ? 'bg-apple-green text-white' : 'bg-white text-[#86868B] group-hover:text-apple-blue group-hover:scale-110'}`}>
+                            {files.a ? <CheckCircle className="h-8 w-8" /> : <UploadCloud className="h-8 w-8" strokeWidth={1.5} />}
                         </div>
-                        <h3 className="font-semibold text-slate-800 mb-1">Referans Listesi</h3>
-                        <p className="text-xs text-slate-500 max-w-[200px] text-center">
-                            {files.a ? <span className="text-green-700 font-medium">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
+                        <h3 className="font-semibold text-[#1D1D1F] mb-1">Referans Listesi</h3>
+                        <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
+                            {files.a ? <span className="text-apple-green font-bold">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
                         </p>
                     </div>
 
                     <div 
                         onClick={() => fileInputRefB.current?.click()}
-                         className={`group relative h-60 bg-slate-50 rounded-xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden
-                        ${files.b ? 'border-green-400 bg-green-50' : 'border-slate-300 hover:border-primary-500 hover:bg-white'}`}
+                         className={`group relative h-64 bg-[#F5F5F7] rounded-[30px] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden hover:scale-[1.02] duration-300
+                        ${files.b ? 'border-apple-green bg-green-50/30' : 'border-gray-200 hover:border-apple-blue hover:bg-white hover:shadow-xl'}`}
                     >
                         <input type="file" ref={fileInputRefB} onChange={(e) => handleFileSelect('b', e)} className="hidden" accept=".csv, .xlsx, .xls" />
                         
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all ${files.b ? 'bg-green-500 text-white' : 'bg-white text-slate-400 border border-slate-200 group-hover:text-primary-600'}`}>
-                            {files.b ? <CheckCircle className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" />}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all shadow-sm ${files.b ? 'bg-apple-green text-white' : 'bg-white text-[#86868B] group-hover:text-apple-blue group-hover:scale-110'}`}>
+                            {files.b ? <CheckCircle className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" strokeWidth={1.5} />}
                         </div>
-                        <h3 className="font-semibold text-slate-800 mb-1">Tüketim Verisi</h3>
-                        <p className="text-xs text-slate-500 max-w-[200px] text-center">
-                             {files.b ? <span className="text-green-700 font-medium">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
+                        <h3 className="font-semibold text-[#1D1D1F] mb-1">Tüketim Verisi</h3>
+                        <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
+                             {files.b ? <span className="text-apple-green font-bold">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
                         </p>
                     </div>
                 </div>
 
                 {loadingProgress > 0 && (
-                     <div className="w-full max-w-lg mb-8 bg-slate-50 rounded-lg p-4 border border-slate-200">
-                        <div className="flex justify-between text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">
+                     <div className="w-full max-w-lg mb-8 bg-[#F5F5F7] rounded-2xl p-5 border border-white/50 relative z-10">
+                        <div className="flex justify-between text-xs font-bold text-[#86868B] mb-3 uppercase tracking-wide">
                              <span>{loadingStatusText}</span>
                              <span>%{loadingProgress}</span>
                         </div>
-                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                             <div className="h-full bg-primary-600 transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+                        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden shadow-inner">
+                             <div className="h-full bg-apple-blue transition-all duration-300 rounded-full" style={{ width: `${loadingProgress}%` }}></div>
                         </div>
                      </div>
                 )}
@@ -446,7 +452,7 @@ const App: React.FC = () => {
                 <button 
                     onClick={handleLoadData}
                     disabled={loadingProgress > 0 && loadingProgress < 100}
-                    className="w-full max-w-sm bg-primary-600 hover:bg-primary-700 text-white font-bold text-base py-3.5 rounded-xl shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full max-w-sm bg-[#1D1D1F] hover:bg-black text-white font-semibold text-lg py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative z-10 hover:scale-[1.02] active:scale-95"
                 >
                     {loadingProgress > 0 && loadingProgress < 100 ? (
                         <Loader2 className="animate-spin h-5 w-5" /> 
@@ -463,7 +469,7 @@ const App: React.FC = () => {
 
   // --- DASHBOARD LAYOUT ---
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden text-slate-900">
+    <div className="flex h-screen bg-[#F5F5F7] font-sans overflow-hidden text-[#1D1D1F]">
         
         <ExplainerModal isOpen={showExplainer} onClose={() => setShowExplainer(false)} />
         <Sidebar 
@@ -473,12 +479,12 @@ const App: React.FC = () => {
             onReset={handleReset}
             level1Count={stats.level1Count}
         />
-        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
             
-            {/* Header */}
-            <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 sticky top-0 z-30 shrink-0">
+            {/* Header (Frosted Glass) */}
+            <header className="h-20 flex items-center justify-between px-8 bg-[#F5F5F7]/80 backdrop-blur-xl sticky top-0 z-30 shrink-0 border-b border-white/50">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+                    <h2 className="text-2xl font-bold text-[#1D1D1F] tracking-tight">
                         {dashboardView === 'general' && 'Genel Bakış'}
                         {dashboardView === 'ai-report' && 'Yapay Zeka Raporu'}
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
@@ -488,8 +494,8 @@ const App: React.FC = () => {
                         {dashboardView === 'rule120' && '120 sm³ Kuralı'}
                     </h2>
                     {duplicateInfo && (
-                        <div className="flex items-center gap-2">
-                            <div className="px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-md text-[11px] font-medium text-slate-500 flex items-center gap-1.5" title="İşlenen veri satırı">
+                        <div className="flex items-center gap-2 animate-slide-up">
+                            <div className="px-3 py-1 bg-white border border-white/60 rounded-full text-[11px] font-semibold text-[#86868B] shadow-sm flex items-center gap-1.5" title="İşlenen veri satırı">
                                 <FileText className="h-3 w-3" />
                                 {duplicateInfo.totalRows.toLocaleString()} Satır
                             </div>
@@ -499,7 +505,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <button 
                       onClick={() => setShowExplainer(true)}
-                      className="p-2 text-slate-400 hover:text-primary-600 hover:bg-slate-50 rounded-lg transition-colors"
+                      className="p-2.5 text-[#86868B] hover:text-[#1D1D1F] hover:bg-white rounded-full transition-all"
                       title="Nasıl Çalışır?"
                     >
                       <BookOpen className="h-5 w-5" />
@@ -508,44 +514,44 @@ const App: React.FC = () => {
                     <button 
                         onClick={handleAiInsights}
                         disabled={isGeneratingReport || riskData.length === 0}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-full transition-all border ${
                             aiReport 
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-primary-500 hover:text-primary-600 disabled:opacity-50'
+                            ? 'bg-apple-purple/10 text-apple-purple border-apple-purple/20'
+                            : 'bg-white text-[#1D1D1F] border-transparent shadow-sm hover:shadow hover:scale-105 disabled:opacity-50'
                         }`}
                     >
                          <BrainCircuit className="h-4 w-4" />
                          {isGeneratingReport ? 'Analiz Ediliyor...' : aiReport ? 'Raporu Aç' : 'AI Analiz'}
                     </button>
                     
-                    <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                    <div className="w-px h-6 bg-gray-300/50 mx-1"></div>
                     
-                    <div className="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <div className="text-xs font-semibold text-slate-600">
-                            {rawSubscribers.length.toLocaleString()} <span className="text-slate-400 font-normal">Abone</span>
+                    <div className="bg-white px-4 py-2 rounded-full shadow-sm border border-white/50">
+                        <div className="text-xs font-bold text-[#1D1D1F]">
+                            {rawSubscribers.length.toLocaleString()} <span className="text-[#86868B] font-medium">Abone</span>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-6 bg-slate-50">
-                <div className="mb-6">
+            <main className="flex-1 overflow-y-auto px-8 py-6 bg-[#F5F5F7] custom-scrollbar">
+                <div className="mb-8">
                     <StatsCards stats={stats} />
                 </div>
                 
                 {/* GENERAL VIEW (Always shows current state) */}
                 {dashboardView === 'general' && (
-                    <div>
+                    <div className="animate-slide-up">
                         {/* Standard Layout */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 h-[400px]">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 h-[440px]">
                             
                             {/* CHART */}
-                            <div className="lg:col-span-2 h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="lg:col-span-2 h-full bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                 <DashboardChart topRisk={filteredRiskData[0] || null} />
                             </div>
 
                             {/* MAP */}
-                            <div className="h-full lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+                            <div className="h-full lg:col-span-1 bg-white rounded-[32px] shadow-apple border border-white/50 p-2">
                                 {analysisStatus.georisk ? (
                                     <HotspotPanel 
                                         riskData={riskData} 
@@ -556,14 +562,14 @@ const App: React.FC = () => {
                                         availableDistricts={availableDistricts}
                                     />
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                            <Building2 className="h-6 w-6 text-slate-300" />
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#F5F5F7] rounded-[24px] border border-dashed border-gray-300">
+                                        <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                            <Building2 className="h-6 w-6 text-gray-300" />
                                         </div>
-                                        <p className="text-slate-500 text-sm font-medium mb-4">Harita analizi henüz başlatılmadı.</p>
+                                        <p className="text-[#86868B] text-sm font-medium mb-4">Harita analizi henüz başlatılmadı.</p>
                                         <button 
                                             onClick={() => setDashboardView('georisk')}
-                                            className="text-primary-600 hover:underline text-sm font-semibold"
+                                            className="text-apple-blue hover:text-blue-600 text-sm font-bold bg-blue-50 px-4 py-2 rounded-full transition-colors"
                                         >
                                             Harita Modülüne Git &rarr;
                                         </button>
@@ -571,7 +577,7 @@ const App: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                         <div className="min-h-[500px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                         <div className="min-h-[500px] bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                             <RiskTable data={filteredRiskData} />
                          </div>
                     </div>
@@ -579,7 +585,7 @@ const App: React.FC = () => {
 
                 {/* AI REPORT VIEW */}
                 {dashboardView === 'ai-report' && (
-                    <div className="h-full">
+                    <div className="h-full animate-slide-up">
                         <AiReportView 
                             report={aiReport}
                             isGenerating={isGeneratingReport}
@@ -592,18 +598,18 @@ const App: React.FC = () => {
 
                 {/* GEO RISK VIEW */}
                 {dashboardView === 'georisk' && (
-                    <div className="h-full">
+                    <div className="h-full animate-slide-up">
                         {!analysisStatus.georisk ? (
                              <AnalysisStarter 
                                 title="Coğrafi Risk Analizi"
                                 desc="Yüksek riskli abonelere yakın (10m) mesafedeki, tutarsız tüketim gösteren diğer aboneleri tarar."
                                 icon={Zap}
-                                color="bg-red-500"
+                                color="bg-apple-red"
                                 moduleName="georisk"
                              />
                         ) : (
                             <>
-                                <div className="mb-6 h-[400px] bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+                                <div className="mb-8 h-[440px] bg-white rounded-[32px] shadow-apple border border-white/50 p-2">
                                     <HotspotPanel 
                                         riskData={riskData} 
                                         referenceLocations={refLocations}
@@ -613,7 +619,7 @@ const App: React.FC = () => {
                                         availableDistricts={availableDistricts}
                                     />
                                 </div>
-                                <div className="h-[500px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="h-[500px] bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                         <GeoRiskTable data={filteredRiskData.filter(r => r.breakdown.geoRisk > 0)} />
                                 </div>
                             </>
@@ -623,17 +629,17 @@ const App: React.FC = () => {
 
                 {/* BUILDING ANALYSIS VIEW (NEW) */}
                 {dashboardView === 'building' && (
-                    <div className="h-full">
+                    <div className="h-full animate-slide-up">
                         {!analysisStatus.buildingAnomaly ? (
                              <AnalysisStarter 
                                 title="Bina Tüketim Analizi"
                                 desc="Aynı binada oturan (aynı koordinat) en az 4 komşunun kış tüketim medyanını hesaplar ve bu ortalamadan %60 sapan daireleri listeler."
                                 icon={Building2}
-                                color="bg-indigo-500"
+                                color="bg-apple-purple"
                                 moduleName="buildingAnomaly"
                              />
                         ) : (
-                            <div className="h-full pb-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="h-full pb-6 bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                 <BuildingAnalysisTable data={buildingRiskData} />
                             </div>
                         )}
@@ -642,21 +648,21 @@ const App: React.FC = () => {
 
                 {/* TAMPERING VIEW */}
                 {dashboardView === 'tampering' && (
-                     <div className="h-full">
+                     <div className="h-full animate-slide-up">
                         {!analysisStatus.tampering ? (
                             <AnalysisStarter 
                                 title="Müdahale Analizi (Bypass)"
                                 desc="Kış ve Yaz tüketim ortalamalarını karşılaştırarak ısıtma katsayısını hesaplar. Mevsimsel farkı olmayan (Bypass şüphesi) aboneleri tespit eder."
                                 icon={Zap}
-                                color="bg-orange-500"
+                                color="bg-apple-orange"
                                 moduleName="tampering"
                              />
                         ) : (
                             <>
-                                <div className="mb-6 h-[350px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="mb-8 h-[380px] bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                     <DashboardChart topRisk={getTopRiskForView(dashboardView)} />
                                 </div>
-                                <div className="h-[600px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="h-[600px] bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                     <TamperingTable data={filteredRiskData.filter(r => r.isTamperingSuspect)} />
                                 </div>
                             </>
@@ -666,17 +672,17 @@ const App: React.FC = () => {
                 
                 {/* RULE 120 VIEW */}
                 {dashboardView === 'rule120' && (
-                    <div className="h-full">
+                    <div className="h-full animate-slide-up">
                          {!analysisStatus.rule120 ? (
                             <AnalysisStarter 
                                 title="120 sm³ Kuralı Analizi"
                                 desc="Ocak ve Şubat aylarının her ikisinde de 120 sm³ altında tüketim yapan, ancak boş ev statüsünde olmayan (Toplam > 25) aboneleri tarar."
                                 icon={Zap}
-                                color="bg-primary-500"
+                                color="bg-apple-blue"
                                 moduleName="rule120"
                              />
                         ) : (
-                            <div className="h-full pb-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="h-full pb-6 bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                 <Rule120Table data={filteredRiskData.filter(r => r.is120RuleSuspect)} />
                             </div>
                         )}
@@ -685,17 +691,17 @@ const App: React.FC = () => {
 
                 {/* INCONSISTENT VIEW */}
                 {dashboardView === 'inconsistent' && (
-                    <div className="h-full">
+                    <div className="h-full animate-slide-up">
                         {!analysisStatus.inconsistent ? (
                             <AnalysisStarter 
                                 title="Tutarsız Tüketim Analizi"
                                 desc="Ani düşüşler, düz çizgi (sabit tüketim) ve sömestr tatili şüphelerini matematiksel trend eğimi ile analiz eder."
                                 icon={Zap}
-                                color="bg-pink-500"
+                                color="bg-apple-red"
                                 moduleName="inconsistent"
                              />
                         ) : (
-                            <div className="h-full pb-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="h-full pb-6 bg-white rounded-[32px] shadow-apple border border-white/50 overflow-hidden">
                                 <InconsistentTable data={filteredRiskData.filter(r => r.inconsistentData.hasWinterDrop || r.inconsistentData.isSemesterSuspect)} />
                             </div>
                         )}

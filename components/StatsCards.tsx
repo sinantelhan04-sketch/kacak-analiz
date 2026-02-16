@@ -11,74 +11,73 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       
       {/* Widget 1 */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between h-[150px]">
+      <div className="bg-white rounded-[24px] p-6 shadow-apple border border-white/50 flex flex-col justify-between h-[160px] transition-transform hover:scale-[1.02] duration-300">
         <div className="flex justify-between items-start">
-             <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center">
-                <Search className="h-5 w-5 text-purple-600" />
+             <div className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center">
+                <Search className="h-5 w-5 text-[#86868B]" />
              </div>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide bg-slate-50 px-2 py-1 rounded">TOPLAM</span>
+             <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wide bg-[#F5F5F7] px-2.5 py-1 rounded-full">TOPLAM</span>
         </div>
         <div>
-            <div className="text-3xl font-bold text-slate-800 tracking-tight">
+            <div className="text-4xl font-semibold text-[#1D1D1F] tracking-tight">
                 {stats.totalScanned.toLocaleString()}
             </div>
-            <div className="flex items-center gap-2 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                <span className="text-xs font-medium text-slate-500">Taranan Abone</span>
+            <div className="flex items-center gap-2 mt-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-apple-green"></div>
+                <span className="text-sm font-medium text-[#86868B]">Taranan Abone</span>
             </div>
         </div>
       </div>
 
       {/* Widget 2 */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between h-[150px]">
-         <div className="flex justify-between items-start">
-             <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center relative">
-                <ShieldAlert className="h-5 w-5 text-red-600" />
+      <div className="bg-white rounded-[24px] p-6 shadow-apple border border-white/50 flex flex-col justify-between h-[160px] transition-transform hover:scale-[1.02] duration-300 relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-32 h-32 bg-apple-red/5 rounded-full -mr-16 -mt-16 group-hover:bg-apple-red/10 transition-colors"></div>
+         <div className="flex justify-between items-start relative z-10">
+             <div className="w-10 h-10 rounded-full bg-apple-red/10 flex items-center justify-center">
+                <ShieldAlert className="h-5 w-5 text-apple-red" />
              </div>
-             <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide bg-red-50 px-2 py-1 rounded">KRİTİK</span>
+             <span className="text-[10px] font-bold text-apple-red uppercase tracking-wide bg-apple-red/10 px-2.5 py-1 rounded-full">KRİTİK</span>
         </div>
-        <div>
-            <div className="text-3xl font-bold text-slate-800 tracking-tight">
+        <div className="relative z-10">
+            <div className="text-4xl font-semibold text-[#1D1D1F] tracking-tight">
                 {stats.level1Count}
             </div>
-            <div className="flex items-center gap-1 mt-1">
-                <span className="text-xs font-medium text-slate-500">Seviye 1 Risk</span>
-                <ArrowUpRight className="h-3 w-3 text-red-500" />
+            <div className="flex items-center gap-1 mt-2">
+                <span className="text-sm font-medium text-[#86868B]">Seviye 1 Risk</span>
+                {stats.level1Count > 0 && <ArrowUpRight className="h-4 w-4 text-apple-red" />}
             </div>
         </div>
       </div>
 
       {/* Widget 3 */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between h-[150px]">
+      <div className="bg-white rounded-[24px] p-6 shadow-apple border border-white/50 flex flex-col justify-between h-[160px] transition-transform hover:scale-[1.02] duration-300">
          <div className="flex justify-between items-start">
-             <div className="w-10 h-10 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
-                <Activity className="h-5 w-5 text-orange-600" />
+             <div className="w-10 h-10 rounded-full bg-apple-orange/10 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-apple-orange" />
              </div>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide bg-slate-50 px-2 py-1 rounded">YÜKSEK</span>
+             <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wide bg-[#F5F5F7] px-2.5 py-1 rounded-full">YÜKSEK</span>
         </div>
         <div>
-             <div className="text-3xl font-bold text-slate-800 tracking-tight">{stats.level2Count}</div>
-             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-                <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '60%' }}></div>
+             <div className="text-4xl font-semibold text-[#1D1D1F] tracking-tight">{stats.level2Count}</div>
+             <div className="w-full bg-[#F5F5F7] rounded-full h-1.5 mt-4 overflow-hidden">
+                <div className="bg-apple-orange h-1.5 rounded-full" style={{ width: '60%' }}></div>
              </div>
-             <div className="text-xs text-slate-500 mt-2 font-medium">Seviye 2 Tespit</div>
         </div>
       </div>
 
       {/* Widget 4 */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between h-[150px]">
+      <div className="bg-white rounded-[24px] p-6 shadow-apple border border-white/50 flex flex-col justify-between h-[160px] transition-transform hover:scale-[1.02] duration-300">
          <div className="flex justify-between items-start">
-             <div className="w-10 h-10 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-primary-600" />
+             <div className="w-10 h-10 rounded-full bg-apple-blue/10 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-apple-blue" />
              </div>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide bg-slate-50 px-2 py-1 rounded">ORTA</span>
+             <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wide bg-[#F5F5F7] px-2.5 py-1 rounded-full">ORTA</span>
         </div>
         <div>
-             <div className="text-3xl font-bold text-slate-800 tracking-tight">{stats.level3Count}</div>
-             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-                <div className="bg-primary-500 h-1.5 rounded-full" style={{ width: '30%' }}></div>
+             <div className="text-4xl font-semibold text-[#1D1D1F] tracking-tight">{stats.level3Count}</div>
+             <div className="w-full bg-[#F5F5F7] rounded-full h-1.5 mt-4 overflow-hidden">
+                <div className="bg-apple-blue h-1.5 rounded-full" style={{ width: '30%' }}></div>
              </div>
-             <div className="text-xs text-slate-500 mt-2 font-medium">Seviye 3 Tespit</div>
         </div>
       </div>
 
