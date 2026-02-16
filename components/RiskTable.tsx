@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { AlertTriangle, MapPin, User, Building2, ThermometerSnowflake, Wrench, Activity, Ban, ChevronDown } from 'lucide-react';
+import { AlertTriangle, MapPin, User, Building2, ThermometerSnowflake, Wrench, Activity, Ban, ChevronDown, Search } from 'lucide-react';
 
 interface RiskTableProps {
   data: RiskScore[];
@@ -9,16 +9,22 @@ interface RiskTableProps {
 
 const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data]);
+  }, [data, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const visibleData = data.slice(0, visibleCount);
+  // Filter based on search query
+  const filteredData = data.filter(row => 
+    row.tesisatNo.includes(searchQuery)
+  );
+
+  const visibleData = filteredData.slice(0, visibleCount);
 
   // Helper to determine badge style (Apple Chips style)
   const renderReasonBadge = (reason: string, row: RiskScore) => {
@@ -61,6 +67,18 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
         <div>
             <h3 className="font-semibold text-[#1D1D1F] text-xl tracking-tight">Riskli Abone Listesi</h3>
             <p className="text-xs text-[#86868B] font-medium mt-0.5">Analiz edilen {data.length} kayıt</p>
+        </div>
+        
+        {/* Search Input */}
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input 
+                type="text" 
+                placeholder="Tesisat No Ara..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-[#F5F5F7] rounded-full text-sm font-medium text-[#1D1D1F] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-apple-blue/20 transition-all w-64"
+            />
         </div>
       </div>
       
@@ -129,7 +147,7 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
               </tr>
             ))}
             
-            {visibleCount < data.length && (
+            {visibleCount < filteredData.length && (
                 <tr>
                     <td colSpan={6} className="px-6 py-6 text-center">
                         <button 
@@ -143,14 +161,14 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                 </tr>
             )}
             
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
                 <tr>
                     <td colSpan={6} className="px-6 py-20 text-center text-[#86868B]">
                         <div className="flex flex-col items-center justify-center gap-4">
                              <div className="w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center">
                                 <AlertTriangle className="h-8 w-8 text-gray-400" />
                              </div>
-                             <p className="font-medium text-sm">Kayıt bulunamadı.</p>
+                             <p className="font-medium text-sm">{searchQuery ? 'Aramanızla eşleşen kayıt bulunamadı.' : 'Kayıt bulunamadı.'}</p>
                         </div>
                     </td>
                 </tr>

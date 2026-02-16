@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BuildingRisk } from '../types';
-import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users } from 'lucide-react';
+import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface BuildingAnalysisTableProps {
@@ -10,19 +10,21 @@ interface BuildingAnalysisTableProps {
 
 const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data]);
+  }, [data, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const visibleData = data.slice(0, visibleCount);
+  const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
+  const visibleData = filteredData.slice(0, visibleCount);
 
   const handleExport = () => {
-    const exportData = data.map(row => ({
+    const exportData = filteredData.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.aboneTipi,
@@ -65,13 +67,27 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
             </button>
         </div>
         
-        <div className="flex flex-col text-right">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Filtre: Bina Ortalamasının %60 Altında Kalanlar
-             </span>
-             <span className="text-[9px] text-slate-500">
-                Aynı Bağlantı Nesnesi, en az 8 temiz (Oca-Mar {'>'} 25) komşu şartı.
-             </span>
+        <div className="flex items-center gap-4">
+             {/* Search Input */}
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
+                <input 
+                    type="text" 
+                    placeholder="Tesisat Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm font-medium text-slate-700 placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all w-48"
+                />
+            </div>
+
+             <div className="flex flex-col text-right">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Filtre: Bina Ortalamasının %60 Altı
+                </span>
+                <span className="text-[9px] text-slate-500">
+                    Aynı Bağlantı Nesnesi, &gt;8 temiz komşu.
+                </span>
+            </div>
         </div>
       </div>
       
@@ -155,26 +171,25 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
               </tr>
             );
             })}
-             {visibleCount < data.length && (
+             {visibleCount < filteredData.length && (
                 <tr>
                     <td colSpan={5} className="px-6 py-4 text-center">
                         <button 
                             onClick={handleShowMore}
                             className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
-                            Daha Fazla Göster ({data.length - visibleCount} kaldı)
+                            Daha Fazla Göster ({filteredData.length - visibleCount} kaldı)
                             <ChevronDown className="h-3 w-3" />
                         </button>
                     </td>
                 </tr>
             )}
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
                 <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
                             <Building2 className="h-8 w-8 text-indigo-200" />
-                            <p>Bina geneline göre anormal düşük tüketen abone bulunamadı.</p>
-                            <p className="text-xs text-slate-400 max-w-md">Not: Analiz sadece aynı "Bağlantı Nesnesi" altında en az 8 adet düzenli tüketen (Oca-Şub-Mar {'>'} 25) komşusu olan binalar için yapılır.</p>
+                            <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Bina geneline göre anormal düşük tüketen abone bulunamadı.'}</p>
                         </div>
                     </td>
                 </tr>

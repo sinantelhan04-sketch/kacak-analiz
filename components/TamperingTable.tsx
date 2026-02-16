@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download } from 'lucide-react';
+import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface TamperingTableProps {
@@ -10,17 +10,21 @@ interface TamperingTableProps {
 
 const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data]);
+  }, [data, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
+  // FILTER & SORT
+  const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
+  
   // SORTING LOGIC: Sort by heatingSensitivity ASCENDING (Lowest ratio is higher risk)
-  const sortedData = [...data].sort((a, b) => a.heatingSensitivity - b.heatingSensitivity);
+  const sortedData = [...filteredData].sort((a, b) => a.heatingSensitivity - b.heatingSensitivity);
   const visibleData = sortedData.slice(0, visibleCount);
 
   const handleExport = () => {
@@ -63,11 +67,25 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
             </button>
         </div>
         
-        <div className="flex flex-col text-right">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Sıralama: Artış Katsayısı (En Azdan &rarr; En Çoğa)
-             </span>
-             <span className="text-[9px] text-slate-500">Katsayı ne kadar düşükse bypass şüphesi o kadar yüksektir.</span>
+        <div className="flex items-center gap-4">
+             {/* Search Input */}
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-300" />
+                <input 
+                    type="text" 
+                    placeholder="Tesisat Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 bg-orange-50 border border-orange-100 rounded-full text-sm font-medium text-slate-700 placeholder-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-200 transition-all w-48"
+                />
+            </div>
+
+             <div className="flex flex-col text-right">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Sıralama: Artış Katsayısı
+                </span>
+                <span className="text-[9px] text-slate-500">En Düşük &rarr; En Yüksek</span>
+            </div>
         </div>
       </div>
       
@@ -120,23 +138,23 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
                 </td>
               </tr>
             ))}
-             {visibleCount < data.length && (
+             {visibleCount < sortedData.length && (
                 <tr>
                     <td colSpan={5} className="px-6 py-4 text-center">
                         <button 
                             onClick={handleShowMore}
                             className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
-                            Daha Fazla Göster ({data.length - visibleCount} kaldı)
+                            Daha Fazla Göster ({sortedData.length - visibleCount} kaldı)
                             <ChevronDown className="h-3 w-3" />
                         </button>
                     </td>
                 </tr>
             )}
-            {data.length === 0 && (
+            {sortedData.length === 0 && (
                 <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                        <p>Tesisat müdahale kriterine uyan kayıt bulunamadı.</p>
+                        <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Tesisat müdahale kriterine uyan kayıt bulunamadı.'}</p>
                     </td>
                 </tr>
             )}

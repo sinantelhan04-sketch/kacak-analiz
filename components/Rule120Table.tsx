@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download } from 'lucide-react';
+import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Rule120TableProps {
@@ -10,19 +10,21 @@ interface Rule120TableProps {
 
 const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data]);
+  }, [data, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const visibleData = data.slice(0, visibleCount);
+  const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
+  const visibleData = filteredData.slice(0, visibleCount);
 
   const handleExport = () => {
-    const exportData = data.map(row => ({
+    const exportData = filteredData.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
         "Bağlantı Nesnesi": row.baglantiNesnesi,
@@ -63,13 +65,27 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
             </button>
         </div>
         
-        <div className="flex flex-col text-right">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Kriter: 25 &lt; Ocak, Şubat, Mart &lt; 110
-             </span>
-             <span className="text-[9px] text-slate-500">
-                Üç ay da (Ocak, Şubat, Mart) belirtilen aralıkta olmalı.
-             </span>
+        <div className="flex items-center gap-4">
+             {/* Search Input */}
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300" />
+                <input 
+                    type="text" 
+                    placeholder="Tesisat Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-sm font-medium text-slate-700 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all w-48"
+                />
+            </div>
+
+             <div className="flex flex-col text-right">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Kriter: 25 &lt; Oca, Şub, Mar &lt; 110
+                </span>
+                <span className="text-[9px] text-slate-500">
+                    Üç ay da belirtilen aralıkta olmalı.
+                </span>
+            </div>
         </div>
       </div>
       
@@ -171,24 +187,23 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                 </tr>
                );
             })}
-            {visibleCount < data.length && (
+            {visibleCount < filteredData.length && (
                 <tr>
                     <td colSpan={7} className="px-6 py-4 text-center">
                         <button 
                             onClick={handleShowMore}
                             className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
-                            Daha Fazla Göster ({data.length - visibleCount} kaldı)
+                            Daha Fazla Göster ({filteredData.length - visibleCount} kaldı)
                             <ChevronDown className="h-3 w-3" />
                         </button>
                     </td>
                 </tr>
             )}
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
                 <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                        <p>120 Kuralı kriterine uyan kayıt bulunamadı.</p>
-                        <p className="text-xs text-slate-500 mt-1">Ocak, Şubat ve Mart aylarının üçü de 25 ile 110 sm³ arasında olanlar listelenir.</p>
+                        <p>{searchQuery ? 'Arama sonucu bulunamadı.' : '120 Kuralı kriterine uyan kayıt bulunamadı.'}</p>
                     </td>
                 </tr>
             )}

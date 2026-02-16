@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { TrendingDown, GraduationCap, Filter, AlertOctagon, Activity, ChevronDown, Download } from 'lucide-react';
+import { TrendingDown, GraduationCap, Filter, AlertOctagon, Activity, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface InconsistentTableProps {
@@ -11,18 +11,23 @@ interface InconsistentTableProps {
 const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
   const [hideSemester, setHideSemester] = useState(true);
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter logic: 
   const filteredData = data.filter(row => {
+      // 1. Search Query
+      if (searchQuery && !row.tesisatNo.includes(searchQuery)) return false;
+
+      // 2. Hide Semester
       const isOnlySemester = row.inconsistentData.isSemesterSuspect && !row.inconsistentData.hasWinterDrop;
-      
       if (hideSemester && isOnlySemester) return false;
+      
       return true;
   });
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data, hideSemester]);
+  }, [data, hideSemester, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
@@ -73,6 +78,18 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
         </div>
         
         <div className="flex items-center gap-3">
+            {/* Search Input */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-300" />
+                <input 
+                    type="text" 
+                    placeholder="Tesisat Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 bg-pink-50 border border-pink-100 rounded-full text-sm font-medium text-slate-700 placeholder-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-200 transition-all w-48"
+                />
+            </div>
+
             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
                 <button 
                     onClick={() => setHideSemester(!hideSemester)}
@@ -169,8 +186,8 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center gap-2">
                              <Filter className="h-8 w-8 text-slate-300" />
-                             <p>Kriterlere uyan tutarsız tüketim bulunamadı.</p>
-                             {hideSemester && <p className="text-xs text-indigo-500">Sömestr filtresi aktif. Devre dışı bırakmayı deneyin.</p>}
+                             <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Kriterlere uyan tutarsız tüketim bulunamadı.'}</p>
+                             {hideSemester && !searchQuery && <p className="text-xs text-indigo-500">Sömestr filtresi aktif. Devre dışı bırakmayı deneyin.</p>}
                         </div>
                     </td>
                 </tr>

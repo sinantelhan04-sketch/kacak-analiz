@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download } from 'lucide-react';
+import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface GeoRiskTableProps {
@@ -10,19 +10,21 @@ interface GeoRiskTableProps {
 
 const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data]);
+  }, [data, searchQuery]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const visibleData = data.slice(0, visibleCount);
+  const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
+  const visibleData = filteredData.slice(0, visibleCount);
 
   const handleExport = () => {
-    const exportData = data.map(row => ({
+    const exportData = filteredData.map(row => ({
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
         "Bağlantı Nesnesi": row.baglantiNesnesi,
@@ -63,13 +65,27 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
             </button>
         </div>
         
-        <div className="flex flex-col text-right">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Filtre: Riskli Noktaya Yakın (&lt;10m) & 120 Kuralı
-             </span>
-             <span className="text-[9px] text-slate-500">
-                Çevresinde kaçak tespit edilen 120 sm³ altı aboneler
-             </span>
+        <div className="flex items-center gap-4">
+             {/* Search Input */}
+             <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-300" />
+                <input 
+                    type="text" 
+                    placeholder="Tesisat Ara..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-1.5 bg-red-50 border border-red-100 rounded-full text-sm font-medium text-slate-700 placeholder-red-300 focus:outline-none focus:ring-2 focus:ring-red-200 transition-all w-48"
+                />
+            </div>
+
+             <div className="flex flex-col text-right">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Filtre: Sıcak Bölge & 120 Kuralı
+                </span>
+                <span className="text-[9px] text-slate-500">
+                    Riskli noktaya &lt;10m yakın.
+                </span>
+            </div>
         </div>
       </div>
       
@@ -152,24 +168,23 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
               </tr>
             );
             })}
-             {visibleCount < data.length && (
+             {visibleCount < filteredData.length && (
                 <tr>
                     <td colSpan={5} className="px-6 py-4 text-center">
                         <button 
                             onClick={handleShowMore}
                             className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
-                            Daha Fazla Göster ({data.length - visibleCount} kaldı)
+                            Daha Fazla Göster ({filteredData.length - visibleCount} kaldı)
                             <ChevronDown className="h-3 w-3" />
                         </button>
                     </td>
                 </tr>
             )}
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
                 <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                        <p>Riskli bölgelerde (Yakın Çevre) şüpheli tüketim tespit edilemedi.</p>
-                        <p className="text-xs text-slate-500 mt-1">Bu liste sadece kanıtlanmış bir kaçağa 10m'den yakın olup kendisi de 120 Kuralına takılanları gösterir.</p>
+                        <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Riskli bölgelerde şüpheli tüketim tespit edilemedi.'}</p>
                     </td>
                 </tr>
             )}
