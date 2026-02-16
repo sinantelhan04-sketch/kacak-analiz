@@ -285,8 +285,8 @@ export const createBaseRiskScore = (
         reasons.push('RİSKLİ ABONE (Kara Liste)');
     } 
     if (isTesisatMatch) {
-        baseScore.breakdown.referenceMatch += 20;
-        reasons.push('UYARI: Tesisatta Geçmiş Müdahale');
+        // baseScore.breakdown.referenceMatch += 20; // REMOVED PER USER REQUEST
+        reasons.push('Bilgi: Tesisatta Geçmiş Kayıt'); // Changed to Informational
     }
     
     baseScore.reason = reasons.join(', ');

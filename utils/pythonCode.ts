@@ -1,3 +1,4 @@
+
 export const PYTHON_LOGIC_CODE = `import pandas as pd
 import numpy as np
 
@@ -28,10 +29,10 @@ def run_gas_fraud_analytics(file_a_path, file_b_path):
 
         # Kriter 1B: TESİSAT UYARISI (Bilgilendirme)
         # Eğer kişi temiz ama Tesisat kara listedeyse, bu "Geçmiş Müdahale" uyarısıdır.
-        # Tek başına suçlu ilan etmez ama puanı artırır.
+        # Bu durum bir risk olarak sayılmaz, sadece bilgilendirme amaçlıdır.
         if str(row['Tesisat No']) in fraud_tesisat_ids:
-            score += 20
-            reasons.append("UYARI: Tesisatta Geçmiş Müdahale")
+            # score += 0 # Puan eklemesi kaldırıldı
+            reasons.append("Bilgi: Tesisatta Geçmiş Kayıt")
             
         # Kriter 2: Tüketim Anomalisi (30 p)
         anomaly_score = 0
