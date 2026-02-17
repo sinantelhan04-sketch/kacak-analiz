@@ -1,9 +1,11 @@
+
+
 import React from 'react';
-import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, Activity, BrainCircuit, Building2 } from 'lucide-react';
+import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, Activity, BrainCircuit, Building2, CloudSun } from 'lucide-react';
 
 interface SidebarProps {
-  currentView: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building';
-  setView: (view: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building') => void;
+  currentView: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather';
+  setView: (view: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather') => void;
   onExport: () => void;
   onReset: () => void;
   level1Count: number;
@@ -16,6 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
     { id: 'ai-report', label: 'Yapay Zeka Raporu', icon: BrainCircuit },
     { id: 'georisk', label: 'Coğrafi Harita', icon: MapPin },
     { id: 'building', label: 'Bina Tüketimi', icon: Building2 },
+    { id: 'weather', label: 'Hava Koşulları', icon: CloudSun },
     { id: 'tampering', label: 'Müdahale Analizi', icon: Wrench },
     { id: 'inconsistent', label: 'Tutarsız Tüketim', icon: TrendingDown },
     { id: 'rule120', label: '120 sm³ Kuralı', icon: Gauge },

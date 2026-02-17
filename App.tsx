@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight, Command } from 'lucide-react';
 import StatsCards from './components/StatsCards';
@@ -7,6 +9,7 @@ import InconsistentTable from './components/InconsistentTable';
 import Rule120Table from './components/Rule120Table';
 import GeoRiskTable from './components/GeoRiskTable';
 import BuildingAnalysisTable from './components/BuildingAnalysisTable';
+import WeatherAnalysisView from './components/WeatherAnalysisView';
 import HotspotPanel from './components/HotspotPanel';
 import AiReportView from './components/AiReportView';
 import Sidebar from './components/Sidebar';
@@ -21,7 +24,7 @@ import { processFiles } from './utils/dataLoader';
 const App: React.FC = () => {
   // Stages: setup (upload) -> dashboard (loaded but idle) -> analyzing (processing)
   const [appStage, setAppStage] = useState<'setup' | 'dashboard'>('setup');
-  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building'>('general');
+  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather'>('general');
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
@@ -489,6 +492,7 @@ const App: React.FC = () => {
                         {dashboardView === 'ai-report' && 'Yapay Zeka Raporu'}
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
                         {dashboardView === 'building' && 'Bina Tüketimi (Komşu Analizi)'}
+                        {dashboardView === 'weather' && 'Hava Koşulları Analizi'}
                         {dashboardView === 'tampering' && 'Müdahale Analizi'}
                         {dashboardView === 'inconsistent' && 'Tutarsız Kış Tüketimi'}
                         {dashboardView === 'rule120' && '120 sm³ Kuralı'}
@@ -643,6 +647,13 @@ const App: React.FC = () => {
                                 <BuildingAnalysisTable data={buildingRiskData} />
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* WEATHER ANALYSIS VIEW (NEW) */}
+                {dashboardView === 'weather' && (
+                    <div className="h-full animate-slide-up">
+                        <WeatherAnalysisView subscribers={rawSubscribers} />
                     </div>
                 )}
 

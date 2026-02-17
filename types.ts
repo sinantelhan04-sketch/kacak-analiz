@@ -97,6 +97,19 @@ export interface BuildingRisk {
   neighborCount: number; // How many neighbors in the building
 }
 
+// NEW: Interface for Weather Analysis
+export interface WeatherRiskResult {
+    tesisatNo: string;
+    baglantiNesnesi: string;
+    location: { lat: number; lng: number };
+    rawWinterAvg: number;
+    normWinterAvg: number; // Normalized by HDD
+    buildingNormMedian: number;
+    deviationPercentage: number;
+    monthlyData: { jan: number; feb: number; mar: number };
+    hddUsed: { jan: number; feb: number; mar: number };
+}
+
 export interface Hotspot {
   street: string; // Can be used as Region ID
   count: number;

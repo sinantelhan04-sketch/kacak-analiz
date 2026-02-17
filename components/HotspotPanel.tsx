@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from 'react';
 import { RiskScore, Hotspot, ReferenceLocation } from '../types';
 import { Map as MapIcon, Navigation, AlertTriangle, XCircle, Filter, MapPin, Search, AlertOctagon, Layers, ThermometerSun, CircleDot, Siren, Satellite, TrafficCone, Landmark, Globe, Menu, X, Plus, Minus } from 'lucide-react';
@@ -5,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from
 import L from 'leaflet';
 import 'leaflet.heat'; // Import side-effects for L.heatLayer
 import { ISTANBUL_DISTRICTS } from '../utils/fraudEngine';
+import { DISTRICT_BOUNDS } from '../utils/weatherEngine';
 
 interface HotspotPanelProps {
   hotspots?: Hotspot[]; 
@@ -91,6 +93,9 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
   // Map Style: Roadmap (Google Default) or Satellite (Google Hybrid)
   const [mapStyle, setMapStyle] = useState<'roadmap' | 'satellite'>('roadmap');
   const [showHeatmap, setShowHeatmap] = useState(false);
+
+  // Helper for text normalization
+  const normalizeTr = (text: string) => text.toLocaleUpperCase('tr').trim();
   
   // 1. Points to Render
   const renderPoints = useMemo(() => {
@@ -110,14 +115,57 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
     return combined;
   }, [referenceLocations]);
 
-  // 2. Map Bounds
+  // 2. Prepare District Shapes (Polygons or Rectangles)
+  const districtPolygons = useMemo(() => {
+      const shapes: Record<string, [number, number][]> = {};
+      const cityKey = normalizeTr(detectedCity);
+
+      // A. Prefer Detailed Polygons (Currently Istanbul only)
+      if (cityKey === 'ISTANBUL') {
+           Object.entries(ISTANBUL_DISTRICTS).forEach(([name, poly]) => {
+               shapes[name] = poly;
+           });
+      }
+
+      // B. Fallback to Bounding Boxes (Rectangles) from DISTRICT_BOUNDS
+      // This supports cities like AĞRI (Doğubayazıt etc.)
+      const dbCityKey = Object.keys(DISTRICT_BOUNDS).find(k => normalizeTr(k) === cityKey);
+      if (dbCityKey) {
+          const districts = DISTRICT_BOUNDS[dbCityKey];
+          Object.entries(districts).forEach(([dName, bounds]) => {
+              // Only add if we don't already have a better polygon
+              const exists = Object.keys(shapes).some(k => normalizeTr(k) === normalizeTr(dName));
+              if (!exists) {
+                  const [minLat, maxLat, minLng, maxLng] = bounds;
+                  // Create Rectangle Polygon (SW -> NW -> NE -> SE)
+                  shapes[dName] = [
+                      [minLat, minLng],
+                      [maxLat, minLng],
+                      [maxLat, maxLng],
+                      [minLat, maxLng]
+                  ];
+              }
+          });
+      }
+      return shapes;
+  }, [detectedCity]);
+
+  // 3. Map Bounds Calculation
   const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
-    if (selectedDistrict && ISTANBUL_DISTRICTS[selectedDistrict]) {
-        const poly = ISTANBUL_DISTRICTS[selectedDistrict];
-        return L.latLngBounds(poly);
+    // If district is selected, zoom to its shape
+    if (selectedDistrict) {
+        const normSelected = normalizeTr(selectedDistrict);
+        const shapeKey = Object.keys(districtPolygons).find(k => normalizeTr(k) === normSelected);
+        if (shapeKey) {
+            return L.latLngBounds(districtPolygons[shapeKey]);
+        }
     }
 
-    if (renderPoints.length === 0) return [[40.8, 28.6], [41.2, 29.4]];
+    // Default: Fit all points
+    if (renderPoints.length === 0) {
+         // Default view if no points (e.g. Istanbul center)
+         return [[40.8, 28.6], [41.2, 29.4]];
+    }
 
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
     renderPoints.forEach(p => {
@@ -128,7 +176,7 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
     });
 
     return [[minLat, minLng], [maxLat, maxLng]];
-  }, [selectedDistrict, renderPoints]);
+  }, [selectedDistrict, renderPoints, districtPolygons]);
 
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
@@ -137,10 +185,8 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
       }
   };
 
-  const isIstanbul = detectedCity.toUpperCase().includes('ISTANBUL') || detectedCity.toUpperCase().includes('İSTANBUL');
-  const districtList = availableDistricts.length > 0 ? availableDistricts : Object.keys(ISTANBUL_DISTRICTS);
-  const activePointCount = renderPoints.length;
-
+  const districtList = availableDistricts.length > 0 ? availableDistricts : Object.keys(districtPolygons);
+  
   return (
     <div className="bg-white rounded-[28px] overflow-hidden flex flex-col h-full relative group font-sans border border-white/50 shadow-inner">
       
@@ -279,9 +325,9 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                 <HeatmapLayer points={renderPoints} />
             )}
 
-            {/* Render Districts (Polygons) - Google Style */}
-            {isIstanbul && Object.entries(ISTANBUL_DISTRICTS).map(([name, poly]) => {
-                const isSelected = selectedDistrict === name;
+            {/* Render Districts (Polygons or Rectangles) */}
+            {Object.entries(districtPolygons).map(([name, poly]) => {
+                const isSelected = selectedDistrict && normalizeTr(selectedDistrict) === normalizeTr(name);
                 return (
                     <Polygon 
                         key={name}

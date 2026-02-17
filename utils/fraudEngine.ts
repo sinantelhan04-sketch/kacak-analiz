@@ -47,7 +47,7 @@ export const ISTANBUL_DISTRICTS: Record<string, [number, number][]> = {
 };
 
 // Ray-casting algorithm for Point in Polygon
-const isPointInPolygon = (lat: number, lng: number, polygon: [number, number][]) => {
+export const isPointInPolygon = (lat: number, lng: number, polygon: [number, number][]) => {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const xi = polygon[i][0], yi = polygon[i][1];
