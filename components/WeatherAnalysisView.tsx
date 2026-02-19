@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { CloudSun, Search, ArrowRight, Building2, MapPin, Calendar, ThermometerSun, AlertCircle, Download, ChevronDown, Loader2 } from 'lucide-react';
+import { CloudSun, Search, ArrowRight, Building2, MapPin, Calendar, ThermometerSun, AlertCircle, Download, ChevronDown, Loader2, Info, ArrowDown } from 'lucide-react';
 import { Subscriber, WeatherRiskResult } from '../types';
 import { analyzeWeatherNormalized, TURKEY_CITIES, getMGMHeatingDegreeDays } from '../utils/weatherEngine';
 import * as XLSX from 'xlsx';
@@ -17,6 +17,7 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
   const [hasRun, setHasRun] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
+  const [showInfo, setShowInfo] = useState(true);
 
   // Use TURKEY_CITIES constant for full list
   const cities = Object.keys(TURKEY_CITIES).sort();
@@ -38,6 +39,7 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
         setResults(res);
         setHasRun(true);
         setVisibleCount(50);
+        setShowInfo(true); // Show explanation when results arrive
     } catch (error) {
         console.error("Analiz hatası:", error);
     } finally {
@@ -83,7 +85,7 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-[#1D1D1F] tracking-tight">Hava Koşulları Analizi</h2>
-                    <p className="text-sm text-[#86868B] font-medium">MGM'den alınan (Isıtma Derece Gün) HDD verileri ile analiz yapar.</p>
+                    <p className="text-sm text-[#86868B] font-medium">MGM verileri (Isıtma Derece Gün - HDD) kullanılarak iklim normalize edilmiş tüketim analizi.</p>
                 </div>
             </div>
 
@@ -187,14 +189,42 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
             )}
 
             {hasRun && results.length > 0 && !isLoading && (
-                <div className="animate-slide-up">
-                    <div className="flex justify-between items-center mb-4 px-2">
+                <div className="animate-slide-up space-y-4">
+                    
+                    {/* INFO BOX (EXPLAINER) */}
+                    {showInfo && (
+                        <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 flex gap-4 relative">
+                             <button onClick={() => setShowInfo(false)} className="absolute top-2 right-2 text-sky-400 hover:text-sky-600"><ChevronDown className="h-4 w-4" /></button>
+                             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm text-sky-500">
+                                 <Info className="h-5 w-5" />
+                             </div>
+                             <div className="text-sm text-sky-900 space-y-2">
+                                 <h4 className="font-bold text-sky-700">Terimler Sözlüğü</h4>
+                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                     <div>
+                                         <span className="font-bold block text-xs uppercase tracking-wide text-sky-600 mb-1">Ham Kış Ortalaması</span>
+                                         <p className="text-xs opacity-80 leading-relaxed">Abonenin Ocak, Şubat ve Mart aylarında sayaçtan okunan gerçek tüketimlerinin (m³) aritmetik ortalamasıdır.</p>
+                                     </div>
+                                     <div>
+                                         <span className="font-bold block text-xs uppercase tracking-wide text-sky-600 mb-1">HDD (Isıtma Derece Gün)</span>
+                                         <p className="text-xs opacity-80 leading-relaxed">Dış hava sıcaklığının ne kadar soğuk olduğunu gösteren bilimsel katsayıdır. Hava soğudukça HDD artar.</p>
+                                     </div>
+                                     <div>
+                                         <span className="font-bold block text-xs uppercase tracking-wide text-sky-600 mb-1">Düzeltilmiş (br/HDD)</span>
+                                         <p className="text-xs opacity-80 leading-relaxed">Ham tüketimin HDD'ye bölünmüş halidir. Bu sayede hava durumundan bağımsız olarak abonenin binaya göre verimliliği/sapması ölçülür.</p>
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center px-2">
                          <div className="flex items-center gap-2">
                             <span className="flex items-center justify-center bg-red-100 text-red-600 font-bold text-xs h-6 px-2 rounded-full border border-red-200">
                                 {results.length} Riskli Abone
                             </span>
                             <span className="text-xs text-gray-400 font-mono hidden md:inline-block">
-                                HDD Ref: {results[0].hddUsed.jan}/{results[0].hddUsed.feb}/{results[0].hddUsed.mar} (MGM)
+                                HDD Ref (O/Ş/M): {results[0].hddUsed.jan}/{results[0].hddUsed.feb}/{results[0].hddUsed.mar}
                             </span>
                          </div>
                          <button 
@@ -209,47 +239,71 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
                         <table className="w-full text-left text-sm">
                             <thead className="bg-sky-50/50 text-[#86868B] uppercase text-[10px] font-bold tracking-wider border-b border-gray-100">
                                 <tr>
-                                    <th className="px-6 py-4">Tesisat No</th>
-                                    <th className="px-6 py-4">Ham Kış Ort.</th>
-                                    <th className="px-6 py-4">Bina Medyan (Norm)</th>
-                                    <th className="px-6 py-4 text-center">Sapma</th>
-                                    <th className="px-6 py-4">Bağlantı & Konum</th>
+                                    <th className="px-6 py-4">Abone Bilgisi</th>
+                                    <th className="px-6 py-4">Gerçek Tüketim (m³)</th>
+                                    <th className="px-6 py-4">İklim Düzeltmeli Kıyaslama</th>
+                                    <th className="px-6 py-4 text-center">Sapma Durumu</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {results.slice(0, visibleCount).map((row, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50/80 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-[#1D1D1F] font-mono">{row.tesisatNo}</div>
-                                            <div className="text-[10px] text-gray-400 mt-0.5">Konut (Kombi)</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <ThermometerSun className="h-4 w-4 text-gray-400" />
-                                                <span className="font-mono font-medium text-gray-600">{row.rawWinterAvg} m³</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                 <span className="font-mono font-bold text-sky-600">{row.buildingNormMedian} <span className="text-[9px] text-gray-400 font-sans">br/HDD</span></span>
-                                                 <span className="text-[10px] text-gray-400">Komşu Ortalaması</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600 border border-red-100">
-                                                %{row.deviationPercentage.toFixed(1)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
+                                    <tr key={idx} className="hover:bg-gray-50/80 transition-colors group">
+                                        <td className="px-6 py-4 align-top">
                                             <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Building2 className="h-3 w-3 text-sky-400" />
-                                                    <span className="text-xs font-medium text-gray-600 font-mono">{row.baglantiNesnesi}</span>
+                                                <div className="font-bold text-[#1D1D1F] font-mono text-sm">{row.tesisatNo}</div>
+                                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                    <Building2 className="h-3 w-3 text-sky-500" />
+                                                    <span className="font-mono font-medium">{row.baglantiNesnesi}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 opacity-60">
+                                                <div className="flex items-center gap-1.5 opacity-60 mt-1">
                                                     <MapPin className="h-3 w-3 text-gray-400" />
                                                     <span className="text-[10px] text-gray-500 font-mono">{row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}</span>
                                                 </div>
+                                            </div>
+                                        </td>
+                                        
+                                        <td className="px-6 py-4 align-top">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <ThermometerSun className="h-4 w-4 text-gray-400" />
+                                                    <span className="font-mono font-bold text-gray-700 text-lg">{row.rawWinterAvg}</span>
+                                                    <span className="text-xs text-gray-400 font-medium">Ort.</span>
+                                                </div>
+                                                {/* Monthly Breakdown */}
+                                                <div className="flex gap-1">
+                                                     <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] text-gray-500 font-mono">
+                                                         Oca: {row.monthlyData.jan}
+                                                     </div>
+                                                     <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] text-gray-500 font-mono">
+                                                         Şub: {row.monthlyData.feb}
+                                                     </div>
+                                                     <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] text-gray-500 font-mono">
+                                                         Mar: {row.monthlyData.mar}
+                                                     </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-6 py-4 align-top">
+                                            <div className="flex flex-col gap-2">
+                                                 <div className="flex justify-between items-center text-xs bg-red-50/50 p-1.5 rounded border border-red-100/50">
+                                                     <span className="text-red-800 font-medium">Abone:</span>
+                                                     <span className="font-mono font-bold text-red-600">{row.normWinterAvg.toFixed(4)} <span className="text-[8px] opacity-60">br/HDD</span></span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-xs bg-sky-50/50 p-1.5 rounded border border-sky-100/50">
+                                                     <span className="text-sky-800 font-medium">Bina Geneli:</span>
+                                                     <span className="font-mono font-bold text-sky-600">{row.buildingNormMedian.toFixed(4)} <span className="text-[8px] opacity-60">br/HDD</span></span>
+                                                 </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-6 py-4 align-top text-center">
+                                            <div className="flex flex-col items-center justify-center h-full pt-1">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold bg-red-50 text-red-600 border border-red-200 shadow-sm">
+                                                    <ArrowDown className="h-3.5 w-3.5" />
+                                                    %{Math.abs(row.deviationPercentage).toFixed(1)}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400 mt-1.5 font-medium">Binadan daha az</span>
                                             </div>
                                         </td>
                                     </tr>
