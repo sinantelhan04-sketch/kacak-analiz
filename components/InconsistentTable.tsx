@@ -26,7 +26,10 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
   });
 
   useEffect(() => {
-    setVisibleCount(50);
+    const timer = setTimeout(() => {
+      setVisibleCount(50);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [data, hideSemester, searchQuery]);
 
   const handleShowMore = () => {

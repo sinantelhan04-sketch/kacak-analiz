@@ -6,6 +6,20 @@ interface DashboardChartProps {
   topRisk: RiskScore | null;
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-lg">
+        <p className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</p>
+        <p className="text-lg font-bold text-slate-800 flex items-center gap-1">
+          {payload[0].value} <span className="text-xs font-medium text-slate-500">m³</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
   // Generate data for the chart using actual consumption data
   const data = React.useMemo(() => {
@@ -28,20 +42,6 @@ const DashboardChart: React.FC<DashboardChartProps> = ({ topRisk }) => {
       { name: 'Ara', sm3: c.dec },
     ];
   }, [topRisk]);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-lg">
-          <p className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</p>
-          <p className="text-lg font-bold text-slate-800 flex items-center gap-1">
-            {payload[0].value} <span className="text-xs font-medium text-slate-500">m³</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   if (!topRisk) return (
       <div className="h-full flex items-center justify-center text-slate-400 bg-white">

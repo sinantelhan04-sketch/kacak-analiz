@@ -14,7 +14,10 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
   const [minDeviation, setMinDeviation] = useState<number>(0);
 
   useEffect(() => {
-    setVisibleCount(50);
+    const timer = setTimeout(() => {
+      setVisibleCount(50);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [data, searchQuery, minDeviation]);
 
   const handleShowMore = () => {

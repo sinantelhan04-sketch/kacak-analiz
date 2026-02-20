@@ -49,7 +49,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, onExport, onRes
                   {menuItems.map((item) => {
                       const isActive = currentView === item.id;
                       const Icon = item.icon;
-                      // @ts-ignore
                       const itemId = item.id; 
 
                       return (

@@ -14,7 +14,10 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    setVisibleCount(50);
+    const timer = setTimeout(() => {
+      setVisibleCount(50);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [data, searchQuery]);
 
   const handleShowMore = () => {
