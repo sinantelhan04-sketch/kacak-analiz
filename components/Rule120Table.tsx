@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download, Search } from 'lucide-react';
@@ -29,10 +30,10 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
         "Muhatap No": row.muhatapNo,
         "Bağlantı Nesnesi": row.baglantiNesnesi,
         "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+        "Aralık (m3)": row.rule120Data?.dec,
         "Ocak (m3)": row.rule120Data?.jan,
         "Şubat (m3)": row.rule120Data?.feb,
-        "Mart (m3)": row.rule120Data?.mar,
-        "3 Aylık Toplam": (row.rule120Data?.jan || 0) + (row.rule120Data?.feb || 0) + (row.rule120Data?.mar || 0),
+        "3 Aylık Toplam": (row.rule120Data?.dec || 0) + (row.rule120Data?.jan || 0) + (row.rule120Data?.feb || 0),
         "Risk Durumu": "120 Kuralı İhlali (25 < Tüketim < 110)",
         "Adres": row.address
     }));
@@ -80,7 +81,7 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
 
              <div className="flex flex-col text-right">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    Kriter: 25 &lt; Oca, Şub, Mar &lt; 110
+                    Kriter: 25 &lt; Ara, Oca, Şub &lt; 110
                 </span>
                 <span className="text-[9px] text-slate-500">
                     Üç ay da belirtilen aralıkta olmalı.
@@ -95,19 +96,19 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
             <tr>
               <th className="px-6 py-4">Tesisat No</th>
               <th className="px-6 py-4">Abone Tipi</th>
+              <th className="px-6 py-4">Aralık (sm³)</th>
               <th className="px-6 py-4">Ocak (sm³)</th>
               <th className="px-6 py-4">Şubat (sm³)</th>
-              <th className="px-6 py-4">Mart (sm³)</th>
               <th className="px-6 py-4">Durum</th>
               <th className="px-6 py-4">Risk Skoru</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-blue-50">
             {visibleData.map((row, index) => {
+               const dec = row.rule120Data?.dec || 0;
                const jan = row.rule120Data?.jan || 0;
                const feb = row.rule120Data?.feb || 0;
-               const mar = row.rule120Data?.mar || 0;
-               const total = jan + feb + mar;
+               const total = dec + jan + feb;
                
                return (
                 <tr key={row.tesisatNo} 
@@ -138,6 +139,13 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                     </td>
                     <td className="px-6 py-4">
                         <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${
+                            dec < 50 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                        }`}>
+                            {dec}
+                        </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${
                             jan < 50 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
                         }`}>
                             {jan}
@@ -148,13 +156,6 @@ const Rule120Table: React.FC<Rule120TableProps> = ({ data }) => {
                             feb < 50 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
                         }`}>
                             {feb}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4">
-                        <span className={`font-mono px-2 py-1 rounded text-xs font-bold ${
-                            mar < 50 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                            {mar}
                         </span>
                     </td>
                     <td className="px-6 py-4">

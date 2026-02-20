@@ -1,5 +1,6 @@
 
 
+
 import { Subscriber, RiskScore, BuildingRisk } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
@@ -342,15 +343,15 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
         return score;
     }
 
+    const dec = score.consumption.dec;
     const jan = score.consumption.jan;
     const feb = score.consumption.feb;
-    const mar = score.consumption.mar;
     
+    const isDecSuspect = dec > 25 && dec < 110;
     const isJanSuspect = jan > 25 && jan < 110;
     const isFebSuspect = feb > 25 && feb < 110;
-    const isMarSuspect = mar > 25 && mar < 110;
 
-    const is120RuleSuspect = isJanSuspect && isFebSuspect && isMarSuspect;
+    const is120RuleSuspect = isDecSuspect && isJanSuspect && isFebSuspect;
 
     const reasons = score.reason ? score.reason.split(', ') : [];
     let anomalyScore = score.breakdown.consumptionAnomaly;
@@ -358,17 +359,17 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     if (is120RuleSuspect) {
         if (!score.is120RuleSuspect) {
             let penalty = 30;
-            const total = jan + feb + mar;
+            const total = dec + jan + feb;
             if (total < 150) penalty = 45; 
             anomalyScore += penalty;
-            reasons.push('120 Kuralı (Ocak-Şubat-Mart Şüpheli)');
+            reasons.push('120 Kuralı (Aralık-Ocak-Şubat Şüpheli)');
         }
     }
 
     return updateTotalScore({
         ...score,
         is120RuleSuspect,
-        rule120Data: { jan, feb, mar },
+        rule120Data: { dec, jan, feb },
         breakdown: { ...score.breakdown, consumptionAnomaly: anomalyScore },
         reason: reasons.join(', ')
     });

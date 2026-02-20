@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BuildingRisk } from '../types';
-import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users, Search } from 'lucide-react';
+import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users, Search, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface BuildingAnalysisTableProps {
@@ -11,16 +11,24 @@ interface BuildingAnalysisTableProps {
 const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
+  const [minDeviation, setMinDeviation] = useState<number>(0);
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [data, searchQuery]);
+  }, [data, searchQuery, minDeviation]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
   };
 
-  const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
+  const filteredData = data.filter(row => {
+      const matchesSearch = row.tesisatNo.includes(searchQuery);
+      // deviationPercentage is negative (e.g. -65), so we take Math.abs
+      const absDev = Math.abs(row.deviationPercentage);
+      const matchesDeviation = absDev >= minDeviation;
+      return matchesSearch && matchesDeviation;
+  });
+  
   const visibleData = filteredData.slice(0, visibleCount);
 
   const handleExport = () => {
@@ -49,8 +57,8 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
     <div className="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col h-full relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
       
-      <div className="p-5 border-b border-indigo-100 bg-white sticky top-0 z-10 flex justify-between items-center backdrop-blur-xl">
-        <div className="flex items-center gap-4">
+      <div className="p-5 border-b border-indigo-100 bg-white sticky top-0 z-10 flex flex-col md:flex-row justify-between items-center gap-4 backdrop-blur-xl">
+        <div className="flex items-center gap-4 w-full md:w-auto">
             <h3 className="font-bold text-slate-800 flex items-center gap-2.5">
             <div className="bg-indigo-50 p-1.5 rounded-md border border-indigo-200 animate-pulse">
                 <Building2 className="h-5 w-5 text-indigo-500" />
@@ -59,34 +67,43 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
             </h3>
             <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-500 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95"
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-500 rounded-lg text-xs font-medium transition-all shadow-sm active:scale-95 ml-auto md:ml-0"
                 title="Listeyi Excel olarak indir"
             >
                 <Download className="h-3.5 w-3.5" />
-                Excel İndir
+                <span className="hidden sm:inline">Excel İndir</span>
             </button>
         </div>
         
-        <div className="flex items-center gap-4">
-             {/* Search Input */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+             {/* Filter Dropdown */}
              <div className="relative">
+                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
+                 <select 
+                    value={minDeviation} 
+                    onChange={(e) => setMinDeviation(Number(e.target.value))}
+                    className="pl-9 pr-8 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm font-bold text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all cursor-pointer appearance-none min-w-[140px]"
+                 >
+                     <option value={0}>Tüm Sapmalar</option>
+                     <option value={50}>%50 ve üzeri</option>
+                     <option value={60}>%60 ve üzeri</option>
+                     <option value={70}>%70 ve üzeri</option>
+                     <option value={80}>%80 ve üzeri</option>
+                     <option value={90}>%90 ve üzeri</option>
+                 </select>
+                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-indigo-400 pointer-events-none" />
+             </div>
+
+             {/* Search Input */}
+             <div className="relative flex-1 md:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
                 <input 
                     type="text" 
                     placeholder="Tesisat Ara..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm font-medium text-slate-700 placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all w-48"
+                    className="pl-9 pr-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm font-medium text-slate-700 placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all w-full md:w-48"
                 />
-            </div>
-
-             <div className="flex flex-col text-right">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    Filtre: Bina Ortalamasının %60 Altı
-                </span>
-                <span className="text-[9px] text-slate-500">
-                    Aynı Bağlantı Nesnesi, &gt;8 temiz komşu.
-                </span>
             </div>
         </div>
       </div>
@@ -189,7 +206,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
                             <Building2 className="h-8 w-8 text-indigo-200" />
-                            <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Bina geneline göre anormal düşük tüketen abone bulunamadı.'}</p>
+                            <p>{searchQuery ? 'Arama sonucu bulunamadı.' : 'Seçilen kriterlerde (sapma oranı) abone bulunamadı.'}</p>
                         </div>
                     </td>
                 </tr>

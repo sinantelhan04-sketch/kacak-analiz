@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download, Search } from 'lucide-react';
@@ -31,6 +32,7 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
         "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
         "Enlem": row.location.lat,
         "Boylam": row.location.lng,
+        "Aralık (m3)": row.rule120Data?.dec || 0,
         "Ocak (m3)": row.rule120Data?.jan || 0,
         "Şubat (m3)": row.rule120Data?.feb || 0,
         "Risk Puanı": row.totalScore,

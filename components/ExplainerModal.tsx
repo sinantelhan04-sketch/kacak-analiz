@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Scale, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, ScanSearch, Radar, CheckCircle2 } from 'lucide-react';
 
@@ -159,7 +161,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         <h4 className="font-bold text-slate-800">120 sm³ Kuralı</h4>
                         <p className="text-xs text-slate-500 mt-2 mb-3">
-                            Ocak, Şubat ve Mart aylarının her birinde 25 ile 110 sm³ arasında (ısınmıyor ama kullanıyor) kalanlar.
+                            Aralık, Ocak ve Şubat aylarının her birinde 25 ile 110 sm³ arasında (ısınmıyor ama kullanıyor) kalanlar.
                         </p>
                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-blue-500 w-[70%]"></div>

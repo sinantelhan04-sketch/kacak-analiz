@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { LayoutDashboard, MapPin, Wrench, TrendingDown, ThermometerSnowflake, Settings, Sliders, ShieldCheck, Download } from 'lucide-react';
 
@@ -46,7 +48,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ currentView, setView, onExp
       id: 'rule120', 
       label: '120 Kuralı', 
       icon: ThermometerSnowflake, 
-      desc: 'Ocak-Şubat < 120 sm³',
+      desc: 'Aralık-Ocak-Şubat < 120 sm³',
       color: 'text-blue-400',
       activeColor: 'text-blue-400'
     },

@@ -4,7 +4,6 @@ import { RiskScore, Hotspot, ReferenceLocation } from '../types';
 import { AlertTriangle, MapPin, Search, ChevronDown, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet.heat'; // Import side-effects for L.heatLayer
 import { ISTANBUL_DISTRICTS } from '../utils/fraudEngine';
 import { DISTRICT_BOUNDS } from '../utils/weatherEngine';
 
@@ -34,55 +33,6 @@ const MapController: React.FC<{ bounds: L.LatLngBoundsExpression | null }> = ({ 
   return null;
 };
 
-// --- Heatmap Layer Component ---
-const HeatmapLayer = ({ points }: { points: { lat: number, lng: number, intensity: number }[] }) => {
-    const map = useMap();
-
-    useEffect(() => {
-      if (!points || points.length === 0) return;
-
-      const heatData = points.map(p => [p.lat, p.lng, p.intensity]);
-
-      // @ts-ignore
-      if (typeof L.heatLayer !== 'function') return;
-
-      // @ts-ignore
-      const heat = L.heatLayer(heatData, {
-          radius: 25,
-          blur: 15,
-          maxZoom: 13,
-          minOpacity: 0.4,
-          gradient: {
-            0.2: '#4285F4', // Google Blue
-            0.4: '#34A853', // Google Green
-            0.6: '#FBBC05', // Google Yellow
-            0.8: '#EA4335', // Google Red
-            1.0: '#B31412'  // Dark Red
-          }
-      });
-
-      heat.addTo(map);
-
-      return () => {
-          map.removeLayer(heat);
-      };
-    }, [points, map]);
-
-    return null;
-};
-
-// --- Radar Style Pin Icon ---
-const radarIcon = L.divIcon({
-  className: 'radar-icon-container',
-  html: `<div class="radar-marker">
-            <div class="radar-wave"></div>
-            <div class="radar-dot"></div>
-         </div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12], // Center the icon
-  popupAnchor: [0, -10]
-});
-
 const HotspotPanel: React.FC<HotspotPanelProps> = ({ 
     referenceLocations = [], 
     selectedDistrict, 
@@ -92,12 +42,25 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
 }) => {
   // Helper for text normalization
   const normalizeTr = (text: string) => text.toLocaleUpperCase('tr').trim();
+
+  // Memoize Icon to prevent re-creation issues, though divIcon is usually lightweight
+  const radarIcon = useMemo(() => L.divIcon({
+    className: 'radar-icon-container',
+    html: `<div class="radar-marker">
+              <div class="radar-wave"></div>
+              <div class="radar-dot"></div>
+           </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12], // Center the icon
+    popupAnchor: [0, -10]
+  }), []);
   
   // 1. Points to Render
   const renderPoints = useMemo(() => {
     const combined: any[] = [];
     referenceLocations.forEach(r => {
-        if(r.lat !== 0 && r.lng !== 0) {
+        // Strict check for valid coordinates
+        if(typeof r.lat === 'number' && typeof r.lng === 'number' && r.lat !== 0 && r.lng !== 0) {
             combined.push({ 
                 ...r, 
                 type: 'Reference', 
@@ -270,7 +233,7 @@ const HotspotPanel: React.FC<HotspotPanelProps> = ({
                         position={[p.lat, p.lng]} 
                         icon={radarIcon}
                     >
-                        <Popup className="google-popup" closeButton={false} offset={[0, -20]}>
+                        <Popup className="google-popup" closeButton={false} offset={[0, -20]} autoPan={false}>
                             <div className="w-[200px]">
                                 <div className="p-0">
                                     <div className="border-b border-gray-100 pb-2 mb-2">

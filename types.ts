@@ -72,9 +72,9 @@ export interface RiskScore {
   isTamperingSuspect: boolean; 
   is120RuleSuspect: boolean; 
   rule120Data?: {
+      dec: number;
       jan: number;
       feb: number;
-      mar: number;
   };
   inconsistentData: {
     hasWinterDrop: boolean; 
