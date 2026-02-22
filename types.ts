@@ -30,6 +30,8 @@ export interface Subscriber {
   aboneTipi: 'Residential' | 'Commercial' | 'Industrial';
   rawAboneTipi?: string;
   consumption: MonthlyData;
+  monthsPresent: (keyof MonthlyData)[];
+  monthsWithMuhatap: (keyof MonthlyData)[];
   isVacant: boolean;
 }
 

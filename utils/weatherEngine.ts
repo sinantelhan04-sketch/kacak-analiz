@@ -154,9 +154,7 @@ const getClimateFactor = (city: string): number => {
 };
 
 export const getMGMHeatingDegreeDays = async (
-    year: string, 
-    city: string, 
-    district: string
+    city: string
 ): Promise<{ jan: number, feb: number, mar: number }> => {
     
     // Simulate API latency for MGM Service

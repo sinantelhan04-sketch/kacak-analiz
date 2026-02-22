@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { CloudSun, Search, ArrowRight, Building2, MapPin, Calendar, ThermometerSun, AlertCircle, Download, ChevronDown, Loader2, Info, ArrowDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { CloudSun, ArrowRight, Building2, MapPin, Calendar, ThermometerSun, AlertCircle, Download, ChevronDown, Loader2, Info, ArrowDown } from 'lucide-react';
 import { Subscriber, WeatherRiskResult } from '../types';
 import { analyzeWeatherNormalized, TURKEY_CITIES, getMGMHeatingDegreeDays } from '../utils/weatherEngine';
 import * as XLSX from 'xlsx';
@@ -31,7 +31,7 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
 
     try {
         // 1. Fetch HDD Data from MGM Service (Simulated)
-        const hddData = await getMGMHeatingDegreeDays(selectedYear, selectedCity, selectedDistrict);
+        const hddData = await getMGMHeatingDegreeDays(selectedCity);
         
         // 2. Run Analysis with fetched data
         const res = analyzeWeatherNormalized(subscribers, selectedCity, selectedDistrict, hddData);

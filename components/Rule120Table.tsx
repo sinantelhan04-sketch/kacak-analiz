@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
-import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, CheckCircle, Download, Search } from 'lucide-react';
+import { ThermometerSnowflake, User, Building2, AlertCircle, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Rule120TableProps {

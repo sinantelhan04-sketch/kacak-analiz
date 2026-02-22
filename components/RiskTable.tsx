@@ -30,7 +30,7 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
   const visibleData = filteredData.slice(0, visibleCount);
 
   // Helper to determine badge style (Apple Chips style)
-  const renderReasonBadge = (reason: string, row: RiskScore) => {
+  const renderReasonBadge = (reason: string) => {
     let style = "bg-[#F5F5F7] text-apple-subtext";
     let icon = null;
 
@@ -134,7 +134,7 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                   <div className="flex flex-wrap pt-1">
                     {row.reason.split(', ').map((r, i) => (
                         <React.Fragment key={i}>
-                            {renderReasonBadge(r, row)}
+                            {renderReasonBadge(r)}
                         </React.Fragment>
                     ))}
                   </div>

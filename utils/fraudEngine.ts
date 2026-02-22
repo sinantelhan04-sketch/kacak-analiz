@@ -1,7 +1,7 @@
 
 
 
-import { Subscriber, RiskScore, BuildingRisk } from '../types';
+import { Subscriber, RiskScore, BuildingRisk, MonthlyData } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
 // Format: [Lat, Lng]
@@ -44,6 +44,36 @@ export const ISTANBUL_DISTRICTS: Record<string, [number, number][]> = {
   ],
   'Başakşehir': [
     [41.130, 28.740], [41.130, 28.830], [41.060, 28.830], [41.060, 28.740]
+  ],
+  'Sarıyer': [
+    [41.250, 28.950], [41.250, 29.150], [41.100, 29.150], [41.100, 28.950]
+  ],
+  'Eyüpsultan': [
+    [41.250, 28.850], [41.250, 28.950], [41.040, 28.950], [41.040, 28.850]
+  ],
+  'Küçükçekmece': [
+    [41.050, 28.750], [41.050, 28.800], [40.980, 28.800], [40.980, 28.750]
+  ],
+  'Bağcılar': [
+    [41.060, 28.800], [41.060, 28.860], [41.020, 28.860], [41.020, 28.800]
+  ],
+  'Bahçelievler': [
+    [41.020, 28.820], [41.020, 28.880], [40.980, 28.880], [40.980, 28.820]
+  ],
+  'Pendik': [
+    [41.050, 29.250], [41.050, 29.400], [40.850, 29.400], [40.850, 29.250]
+  ],
+  'Kartal': [
+    [41.000, 29.150], [41.000, 29.250], [40.880, 29.250], [40.880, 29.150]
+  ],
+  'Tuzla': [
+    [41.000, 29.350], [41.000, 29.450], [40.800, 29.450], [40.800, 29.350]
+  ],
+  'Gaziosmanpaşa': [
+    [41.100, 28.880], [41.100, 28.930], [41.050, 28.930], [41.050, 28.880]
+  ],
+  'Kağıthane': [
+    [41.120, 28.950], [41.120, 29.000], [41.060, 29.000], [41.060, 28.950]
   ]
 };
 
@@ -61,11 +91,23 @@ export const isPointInPolygon = (lat: number, lng: number, polygon: [number, num
   return inside;
 };
 
-const identifyDistrictGeometric = (lat: number, lng: number): string => {
+export const identifyDistrictGeometric = (lat: number, lng: number): string => {
   for (const [name, poly] of Object.entries(ISTANBUL_DISTRICTS)) {
     if (isPointInPolygon(lat, lng, poly)) return name;
   }
-  return 'Diğer';
+  
+  // Check if within Turkey's general boundaries
+  if (lat >= 35.5 && lat <= 42.5 && lng >= 25.5 && lng <= 45.0) {
+      // Specific coordinate checks for common regions if needed
+      if (lat >= 39.5 && lat <= 39.8 && lng >= 43.2 && lng <= 43.5) return 'Hamur / Ağrı';
+      if (lat >= 39.4 && lat <= 39.6 && lng >= 42.7 && lng <= 43.0) return 'Tutak / Ağrı';
+      if (lat >= 39.8 && lat <= 40.0 && lng >= 42.9 && lng <= 43.2) return 'Ağrı Merkez';
+      if (lat >= 39.1 && lat <= 39.3 && lng >= 42.7 && lng <= 43.0) return 'Patnos / Ağrı';
+      
+      return 'Türkiye / Bölge';
+  }
+  
+  return 'Bilinmeyen Konum';
 };
 
 // --- DATA NORMALIZATION (Pandas Style) ---
@@ -165,7 +207,7 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
     const buildingRisks: BuildingRisk[] = [];
 
     // 3. Her bina grubunu incele
-    buildingMap.forEach((subs, key) => {
+    buildingMap.forEach((subs) => {
         
         // --- ADIM 2: "Temiz Abone" Filtresi ---
         // Ocak, Şubat ve Mart aylarının HEPSİNDE tüketim > 25 sm³ olmalı.
@@ -569,6 +611,8 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
       rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), 
       consumption: data,
+      monthsPresent: Object.keys(data) as (keyof MonthlyData)[],
+      monthsWithMuhatap: Object.keys(data) as (keyof MonthlyData)[],
       isVacant: false
     });
   }

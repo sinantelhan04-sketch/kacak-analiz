@@ -1,6 +1,7 @@
 {
   "name": "kacak-analiz-programi",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@google/genai": "^1.40.0",

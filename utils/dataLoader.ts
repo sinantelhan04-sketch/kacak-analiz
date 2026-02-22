@@ -102,7 +102,7 @@ const readWorkbook = async (file: File): Promise<XLSX.WorkBook> => {
         try {
              const text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
              return XLSX.read(text, { type: 'string', dense: true });
-        } catch(e) {
+        } catch {
              // Fallback to Turkish Windows-1254
              const text = new TextDecoder('windows-1254').decode(buffer);
              return XLSX.read(text, { type: 'string', dense: true });
@@ -195,6 +195,7 @@ export const processFiles = async (
         const idxLng = getColIndex(headers, ['boylam', 'lng', 'long', 'longitude']);
         const idxCity = getColIndex(headers, ['il', 'sehir', 'city', 'vilayet']);
         const idxDistrict = getColIndex(headers, ['ilce', 'district', 'bolge']);
+        const idxAddress = getColIndex(headers, ['adres', 'address', 'tam adres', 'acik adres']);
         const idxMonth = getColIndex(headers, ['ay', 'month', 'donem']);
         const idxCons = getColIndex(headers, ['sm3', 'tuketim', 'm3', 'sarfiyat']);
         
@@ -235,32 +236,48 @@ export const processFiles = async (
                     tesisatNo: rawId, muhatapNo: initMuhatap, 
                     baglantiNesnesi: baglantiVal,
                     relatedMuhatapNos: [initMuhatap],
-                    address: '', 
+                    address: idxAddress !== -1 ? cleanVal(row[idxAddress]) : '', 
                     location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
                     city: idxCity !== -1 ? cleanVal(row[idxCity]) : '',
                     district: idxDistrict !== -1 ? cleanVal(row[idxDistrict]) : '',
                     aboneTipi: isCommercial ? 'Commercial' : 'Residential',
                     rawAboneTipi: rawTypeStr,
                     consumption: {jan:0, feb:0, mar:0, apr:0, may:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0},
+                    monthsPresent: [],
+                    monthsWithMuhatap: [],
                     isVacant: false
                 });
             }
             const sub = subscriberMap.get(id)!;
+            const currentMuhatap = idxMuhatap !== -1 ? cleanVal(row[idxMuhatap]) : '';
+            
             if (idxMuhatap !== -1) {
-                const currentMuhatap = cleanVal(row[idxMuhatap]);
                 if (currentMuhatap) {
                         const normCurrent = normalizeId(currentMuhatap);
                         const exists = sub.relatedMuhatapNos.some(m => normalizeId(m) === normCurrent);
                         if (!exists) sub.relatedMuhatapNos.push(currentMuhatap);
                 }
             }
+
             if(idxMonth !== -1 && idxCons !== -1) {
                 const monthKey = getMonthKey(row[idxMonth]);
-                if (monthKey) sub.consumption[monthKey] = parseNum(row[idxCons]);
+                if (monthKey) {
+                    sub.consumption[monthKey] = parseNum(row[idxCons]);
+                    if (!sub.monthsPresent.includes(monthKey)) sub.monthsPresent.push(monthKey);
+                    if (currentMuhatap && !sub.monthsWithMuhatap.includes(monthKey)) {
+                        sub.monthsWithMuhatap.push(monthKey);
+                    }
+                }
             } else {
                     (Object.keys(wideFormatMap) as Array<keyof MonthlyData>).forEach(mKey => {
                         const colIdx = wideFormatMap[mKey];
-                        if (colIdx !== undefined && row[colIdx] !== undefined) sub.consumption[mKey] = parseNum(row[colIdx]);
+                        if (colIdx !== undefined && row[colIdx] !== undefined) {
+                            sub.consumption[mKey] = parseNum(row[colIdx]);
+                            if (!sub.monthsPresent.includes(mKey)) sub.monthsPresent.push(mKey);
+                            if (currentMuhatap && !sub.monthsWithMuhatap.includes(mKey)) {
+                                sub.monthsWithMuhatap.push(mKey);
+                            }
+                        }
                     });
             }
         }
