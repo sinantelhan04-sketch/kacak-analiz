@@ -1,9 +1,10 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
 import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface GeoRiskTableProps {
   data: RiskScore[];
@@ -12,6 +13,8 @@ interface GeoRiskTableProps {
 const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
+  const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
+  const isResolvingRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,20 +30,61 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
   const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
   const visibleData = filteredData.slice(0, visibleCount);
 
+  // Automatically resolve locations that need it using OSM Nominatim
+  useEffect(() => {
+    if (isResolvingRef.current) return;
+
+    const resolveNeeded = visibleData.filter(sub => {
+      const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
+      const hasLocation = sub.location && sub.location.lat !== 0;
+      return notResolvedYet && hasLocation;
+    }).slice(0, 5);
+
+    if (resolveNeeded.length === 0) return;
+
+    const resolveAll = async () => {
+      isResolvingRef.current = true;
+      for (const sub of resolveNeeded) {
+        const key = `${sub.location.lat},${sub.location.lng}`;
+        if (resolvedMap[key]) continue;
+
+        try {
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          if (result) {
+            setResolvedMap(prev => ({ ...prev, [key]: result }));
+          } else {
+            setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
+          }
+        } catch (err) {
+          console.error("Resolution error:", err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+      isResolvingRef.current = false;
+    };
+
+    resolveAll();
+  }, [visibleData, resolvedMap]);
+
   const handleExport = () => {
-    const exportData = filteredData.map(row => ({
-        "Tesisat No": row.tesisatNo,
-        "Muhatap No": row.muhatapNo,
-        "Bağlantı Nesnesi": row.baglantiNesnesi,
-        "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
-        "Enlem": row.location.lat,
-        "Boylam": row.location.lng,
-        "Aralık (m3)": row.rule120Data?.dec || 0,
-        "Ocak (m3)": row.rule120Data?.jan || 0,
-        "Şubat (m3)": row.rule120Data?.feb || 0,
-        "Risk Puanı": row.totalScore,
-        "Detay": row.reason
-    }));
+    const exportData = filteredData.map(row => {
+        const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+        return {
+            "Tesisat No": row.tesisatNo,
+            "Muhatap No": row.muhatapNo,
+            "Bağlantı Nesnesi": row.baglantiNesnesi,
+            "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+            "Adres": resolved?.fullName || row.address,
+            "İlçe (OSM)": resolved?.district || "",
+            "Enlem": row.location.lat,
+            "Boylam": row.location.lng,
+            "Aralık (m3)": row.rule120Data?.dec || 0,
+            "Ocak (m3)": row.rule120Data?.jan || 0,
+            "Şubat (m3)": row.rule120Data?.feb || 0,
+            "Risk Puanı": row.totalScore,
+            "Detay": row.reason
+        };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -136,11 +180,34 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
                     </div>
                 </td>
                 <td className="px-6 py-4">
-                     <div className="flex items-center gap-2">
-                        <MapPin className="h-3 w-3 text-red-500" />
-                        <span className="text-xs text-slate-600 font-mono font-bold">
-                            {row.location.lat.toFixed(5)}, {row.location.lng.toFixed(5)}
-                        </span>
+                     <div className="flex flex-col">
+                        <div className="flex items-center gap-2" title={(() => {
+                            const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                            return resolved?.fullName || 'Konum Belirleniyor...';
+                        })()}>
+                            <MapPin className="h-3 w-3 text-red-500" />
+                            <span className="text-xs text-slate-600 font-bold">
+                                {(() => {
+                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                    return resolved?.district || row.district || 'Belirleniyor...';
+                                })()}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 ml-5">
+                            <span className="text-[10px] text-slate-400 font-mono">
+                                {row.location.lat.toFixed(5)}, {row.location.lng.toFixed(5)}
+                            </span>
+                            <span className="text-slate-300 text-[10px]">|</span>
+                            <a 
+                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-blue-500 hover:underline font-bold"
+                                title="HGM Geoportal'da Doğrula"
+                            >
+                                HGM
+                            </a>
+                        </div>
                      </div>
                 </td>
                 <td className="px-6 py-4">

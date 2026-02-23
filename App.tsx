@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight, Command } from 'lucide-react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight, Command, MapPin } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -29,6 +29,7 @@ const App: React.FC = () => {
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
+  const [hgmPolygons, setHgmPolygons] = useState<any>(null);
   const [refMuhatapIds, setRefMuhatapIds] = useState<Set<string>>(new Set());
   const [refTesisatIds, setRefTesisatIds] = useState<Set<string>>(new Set());
   const [refLocations, setRefLocations] = useState<ReferenceLocation[]>([]); 
@@ -67,10 +68,10 @@ const App: React.FC = () => {
   // File Refs for UI state (names)
   const fileInputRefA = useRef<HTMLInputElement>(null);
   const fileInputRefB = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<{a: string | null, b: string | null}>({ a: null, b: null });
+  const [files, setFiles] = useState<{a: string | null, b: string | null, c: string | null}>({ a: null, b: null, c: null });
   
   // Ref to store actual File objects for processing
-  const fileObjects = useRef<{a: File | null, b: File | null}>({ a: null, b: null });
+  const fileObjects = useRef<{a: File | null, b: File | null, c: File[] | null}>({ a: null, b: null, c: null });
 
   // --- STAGE 1: LOAD DATA & INITIALIZE BASE SCORES ---
   const handleLoadData = async () => {
@@ -89,7 +90,7 @@ const App: React.FC = () => {
              loadDemoData();
              return;
         }
-        setValidationError("Lütfen her iki dosyayı da yükleyiniz.");
+        setValidationError("Lütfen Referans ve Tüketim dosyalarını yükleyiniz.");
         setIsReadingFile(null);
         return;
     }
@@ -104,7 +105,8 @@ const App: React.FC = () => {
             (progress, status) => {
                 setLoadingProgress(progress);
                 setLoadingStatusText(status);
-            }
+            },
+            fileObjects.current.c || undefined
         );
         
         finalizeDataLoad(result);
@@ -146,13 +148,16 @@ const App: React.FC = () => {
       refMuhatapIds: Set<string>, 
       refTesisatIds: Set<string>, 
       refLocations: ReferenceLocation[],
-      rawCount: number
+      rawCount: number,
+      hgmPolygons?: any
   }) => {
       setLoadingProgress(95);
       setLoadingStatusText("Risk analizleri tamamlanıyor...");
 
+      if (data.hgmPolygons) setHgmPolygons(data.hgmPolygons);
+
       // --- RUN BASE ANALYSIS (Main Thread - Fast enough for scored data) ---
-      const initialRisks = data.subscribers.map((sub) => createBaseRiskScore(sub, data.refMuhatapIds, data.refTesisatIds));
+      const initialRisks = data.subscribers.map((sub) => createBaseRiskScore(sub, data.refMuhatapIds, data.refTesisatIds, data.hgmPolygons));
       
       // Sort by initial score
       initialRisks.sort((a,b) => b.totalScore - a.totalScore);
@@ -308,13 +313,19 @@ const App: React.FC = () => {
       XLSX.writeFile(wb, "kacak_analiz_sonuclari.xlsx");
   };
 
-  const handleFileSelect = async (type: 'a' | 'b', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (type: 'a' | 'b' | 'c', e: React.ChangeEvent<HTMLInputElement>) => {
     setValidationError(null);
     if (e.target.files && e.target.files.length > 0) {
+      if (type === 'c') {
+          const filesArray = Array.from(e.target.files);
+          fileObjects.current.c = filesArray;
+          setFiles(prev => ({ ...prev, c: `${filesArray.length} Dosya Seçildi` }));
+          return;
+      }
       const file = e.target.files[0];
       // Only set file object and name, do NOT read here
       if (type === 'a') fileObjects.current.a = file;
-      else fileObjects.current.b = file;
+      else if (type === 'b') fileObjects.current.b = file;
       
       setFiles(prev => ({ ...prev, [type]: file.name }));
     }
@@ -407,7 +418,7 @@ const App: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-10 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-10 relative z-10">
                     <div 
                         onClick={() => fileInputRefA.current?.click()}
                         className={`group relative h-64 bg-[#F5F5F7] rounded-[30px] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden hover:scale-[1.02] duration-300
@@ -418,8 +429,8 @@ const App: React.FC = () => {
                         <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all shadow-sm ${files.a ? 'bg-apple-green text-white' : 'bg-white text-[#86868B] group-hover:text-apple-blue group-hover:scale-110'}`}>
                             {files.a ? <CheckCircle className="h-8 w-8" /> : <UploadCloud className="h-8 w-8" strokeWidth={1.5} />}
                         </div>
-                        <h3 className="font-semibold text-[#1D1D1F] mb-1">Referans Listesi</h3>
-                        <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
+                        <h3 className="font-semibold text-[#1D1D1F] mb-1 text-sm">Referans Listesi</h3>
+                        <p className="text-[10px] text-[#86868B] max-w-[150px] text-center font-medium">
                             {files.a ? <span className="text-apple-green font-bold">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
                         </p>
                     </div>
@@ -434,9 +445,30 @@ const App: React.FC = () => {
                         <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all shadow-sm ${files.b ? 'bg-apple-green text-white' : 'bg-white text-[#86868B] group-hover:text-apple-blue group-hover:scale-110'}`}>
                             {files.b ? <CheckCircle className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" strokeWidth={1.5} />}
                         </div>
-                        <h3 className="font-semibold text-[#1D1D1F] mb-1">Tüketim Verisi</h3>
-                        <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
+                        <h3 className="font-semibold text-[#1D1D1F] mb-1 text-sm">Tüketim Verisi</h3>
+                        <p className="text-[10px] text-[#86868B] max-w-[150px] text-center font-medium">
                              {files.b ? <span className="text-apple-green font-bold">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
+                        </p>
+                    </div>
+
+                    <div 
+                        onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.multiple = true;
+                            input.accept = '.shp,.dbf,.shx,.zip';
+                            input.onchange = (e: any) => handleFileSelect('c', e);
+                            input.click();
+                        }}
+                         className={`group relative h-64 bg-[#F5F5F7] rounded-[30px] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center overflow-hidden hover:scale-[1.02] duration-300
+                        ${files.c ? 'border-apple-green bg-green-50/30' : 'border-gray-200 hover:border-apple-blue hover:bg-white hover:shadow-xl'}`}
+                    >
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all shadow-sm ${files.c ? 'bg-apple-green text-white' : 'bg-white text-[#86868B] group-hover:text-apple-blue group-hover:scale-110'}`}>
+                            {files.c ? <CheckCircle className="h-8 w-8" /> : <MapPin className="h-8 w-8" strokeWidth={1.5} />}
+                        </div>
+                        <h3 className="font-semibold text-[#1D1D1F] mb-1 text-sm">HGM Sınır Verisi</h3>
+                        <p className="text-[10px] text-[#86868B] max-w-[150px] text-center font-medium">
+                             {files.c ? <span className="text-apple-green font-bold">{files.c}</span> : 'HGM Türkiye sınır bilgilerini içeren SHP/DBF dosyaları.'}
                         </p>
                     </div>
                 </div>

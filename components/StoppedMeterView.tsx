@@ -3,7 +3,7 @@ import { Subscriber } from '../types';
 import { OctagonPause, Search, Download, Filter, Building2, User, ChevronDown, AlertCircle, MapPin } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { identifyDistrictGeometric } from '../utils/fraudEngine';
-import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface StoppedMeterViewProps {
   subscribers: Subscriber[];
@@ -102,7 +102,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
           if (summerAvg <= 0 || winterAvg <= 0) return false;
           
           const ratio = winterAvg / summerAvg;
-          if (ratio < 0.7 || ratio > 1.3) return false;
+          if (ratio < 0.7 || ratio > 3.0) return false;
           
           return true;
       }
@@ -151,7 +151,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
       const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
       const hasLocation = sub.location && sub.location.lat !== 0;
       return notResolvedYet && hasLocation;
-    }).slice(0, 3); // Small batch to respect rate limits
+    }).slice(0, 5); // Increased batch size slightly
 
     if (resolveNeeded.length === 0) return;
 
@@ -167,17 +167,17 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
 
         try {
           // Resolve by lat/lng only as per user request
-          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
 
           if (result) {
-            console.log(`OSM Resolved ${key} to ${result.district} / ${result.city}`);
+            console.log(`Resolved ${key} to ${result.district} / ${result.city}`);
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             // Mark as failed to avoid retrying immediately
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("OSM resolution error:", err);
+          console.error("Resolution error:", err);
         }
 
         // Nominatim strict rate limit: 1 request per second
@@ -196,6 +196,9 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
   const handleExport = () => {
     if (filteredData.length === 0) return;
     const exportData = filteredData.map(row => {
+      const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+      const displayAddress = resolved?.fullName || row.address;
+
       if (activeTab === 'mustakil-kombi') {
         const summerAvg = ((row.consumption.jun || 0) + (row.consumption.jul || 0) + (row.consumption.aug || 0)) / 3;
         const winterAvg = ((row.consumption.dec || 0) + (row.consumption.jan || 0) + (row.consumption.feb || 0)) / 3;
@@ -203,7 +206,8 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
           "Tesisat No": row.tesisatNo,
           "Muhatap No": row.muhatapNo,
           "Abone Tipi": row.rawAboneTipi,
-          "Adres": row.address,
+          "Adres": displayAddress,
+          "İlçe (OSM)": resolved?.district || "",
           "Yaz Ortalaması (m3)": summerAvg.toFixed(1),
           "Kış Ortalaması (m3)": winterAvg.toFixed(1),
           "Durum": 'YAZ ≈ KIŞ (ŞÜPHELİ)'
@@ -213,7 +217,8 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
         "Tesisat No": row.tesisatNo,
         "Muhatap No": row.muhatapNo,
         "Abone Tipi": row.rawAboneTipi,
-        "Adres": row.address,
+        "Adres": displayAddress,
+        "İlçe (OSM)": resolved?.district || "",
         "Aralık (m3)": row.consumption.dec,
         "Ocak (m3)": row.consumption.jan,
         "Şubat (m3)": row.consumption.feb,
@@ -464,7 +469,10 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                     <div className="flex flex-col max-w-xs">
                                         <div className="flex items-center gap-1 text-[#1D1D1F] font-bold mb-0.5">
                                             <MapPin className="h-3 w-3 text-rose-500" />
-                                            <span className="truncate">
+                                            <span className="truncate" title={(() => {
+                                                const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                                return resolved?.fullName || 'Konum Belirleniyor...';
+                                            })()}>
                                                 {(() => {
                                                     const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
                                                     if (resolved) return resolved.district || 'Bilinmiyor';
@@ -474,20 +482,38 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                                 })()}
                                             </span>
                                         </div>
-                                        <a 
-                                            href={`https://www.google.com/maps/search/?api=1&query=${row.location.lat},${row.location.lng}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-gray-400 truncate hover:text-rose-600 hover:underline transition-colors flex items-center gap-1" 
-                                            title="Google Haritalarda Aç"
-                                        >
-                                            {(() => {
-                                                const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                                if (resolved) return resolved.district || 'Bilinmiyor';
-                                                return 'Haritada Gör';
-                                            })()}
-                                            <AlertCircle className="h-2 w-2" />
-                                        </a>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <a 
+                                                href={`https://www.google.com/maps/search/?api=1&query=${row.location.lat},${row.location.lng}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] text-gray-400 truncate hover:text-rose-600 hover:underline transition-colors flex items-center gap-1" 
+                                                title={(() => {
+                                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                                    return resolved?.fullName || 'Google Haritalarda Aç';
+                                                })()}
+                                            >
+                                                {(() => {
+                                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                                    if (resolved) {
+                                                        const addr = resolved.fullName?.split(',') || [];
+                                                        return addr[0] || 'Haritada Gör';
+                                                    }
+                                                    return 'Haritada Gör';
+                                                })()}
+                                                <AlertCircle className="h-2 w-2" />
+                                            </a>
+                                            <span className="text-gray-300">|</span>
+                                            <a 
+                                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] text-blue-400 hover:text-blue-600 hover:underline transition-colors font-bold"
+                                                title="HGM Geoportal'da Doğrula"
+                                            >
+                                                HGM
+                                            </a>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
 import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface TamperingTableProps {
   data: RiskScore[];
@@ -11,6 +12,8 @@ interface TamperingTableProps {
 const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
+  const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
+  const isResolvingRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -30,17 +33,57 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
   const sortedData = [...filteredData].sort((a, b) => b.seasonalStats.summerAvg - a.seasonalStats.summerAvg);
   const visibleData = sortedData.slice(0, visibleCount);
 
+  // Automatically resolve locations that need it using OSM Nominatim
+  useEffect(() => {
+    if (isResolvingRef.current) return;
+
+    const resolveNeeded = visibleData.filter(sub => {
+      const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
+      const hasLocation = sub.location && sub.location.lat !== 0;
+      return notResolvedYet && hasLocation;
+    }).slice(0, 5);
+
+    if (resolveNeeded.length === 0) return;
+
+    const resolveAll = async () => {
+      isResolvingRef.current = true;
+      for (const sub of resolveNeeded) {
+        const key = `${sub.location.lat},${sub.location.lng}`;
+        if (resolvedMap[key]) continue;
+
+        try {
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          if (result) {
+            setResolvedMap(prev => ({ ...prev, [key]: result }));
+          } else {
+            setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
+          }
+        } catch (err) {
+          console.error("Resolution error:", err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+      isResolvingRef.current = false;
+    };
+
+    resolveAll();
+  }, [visibleData, resolvedMap]);
+
   const handleExport = () => {
-    const exportData = sortedData.map(row => ({
-        "Tesisat No": row.tesisatNo,
-        "Muhatap No": row.muhatapNo,
-        "Bağlantı Nesnesi": row.baglantiNesnesi,
-        "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
-        "Yaz Ortalaması (m3)": row.seasonalStats.summerAvg,
-        "Kış Ortalaması (m3)": row.seasonalStats.winterAvg,
-        "Isınma Katsayısı (Kat)": row.heatingSensitivity.toFixed(2),
-        "Adres": row.address
-    }));
+    const exportData = sortedData.map(row => {
+        const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+        return {
+            "Tesisat No": row.tesisatNo,
+            "Muhatap No": row.muhatapNo,
+            "Bağlantı Nesnesi": row.baglantiNesnesi,
+            "Abone Tipi": row.rawAboneTipi || row.aboneTipi,
+            "Yaz Ortalaması (m3)": row.seasonalStats.summerAvg,
+            "Kış Ortalaması (m3)": row.seasonalStats.winterAvg,
+            "Isınma Katsayısı (Kat)": row.heatingSensitivity.toFixed(2),
+            "Adres": resolved?.fullName || row.address,
+            "İlçe (OSM)": resolved?.district || ""
+        };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -113,6 +156,24 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
                     <div className="flex flex-col">
                         <span className="font-bold text-slate-800 group-hover:text-black font-mono transition-colors">{row.tesisatNo}</span>
                         <span className="text-xs text-slate-400 font-mono mt-0.5">{row.muhatapNo}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-500 font-medium">
+                                {(() => {
+                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                    return resolved?.district || row.district || 'Belirleniyor...';
+                                })()}
+                            </span>
+                            <span className="text-slate-300 text-[10px]">|</span>
+                            <a 
+                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-blue-500 hover:underline font-bold"
+                                title="HGM Geoportal'da Doğrula"
+                            >
+                                HGM
+                            </a>
+                        </div>
                     </div>
                 </td>
                 <td className="px-6 py-4">
