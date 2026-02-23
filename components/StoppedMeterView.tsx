@@ -15,6 +15,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
   const [visibleCount, setVisibleCount] = useState(50);
   const [onlyDecActive, setOnlyDecActive] = useState(false);
   const [buildingTypeFilter, setBuildingTypeFilter] = useState<'all' | 'mustakil' | 'bina'>('all');
+  const [activeTab, setActiveTab] = useState<'standard' | 'mustakil-kombi'>('standard');
   
   // NEW: Location resolution state
   const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
@@ -87,6 +88,25 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
           return false;
       }
 
+      if (activeTab === 'mustakil-kombi') {
+          if (!sub.baglantiNesnesi) return false;
+          const count = baglantiNesnesiCounts[sub.baglantiNesnesi] || 0;
+          if (count !== 1) return false;
+          
+          const type = sub.rawAboneTipi?.toLocaleUpperCase('tr') || '';
+          if (!type.includes('KONUT') || !type.includes('KOMBİ')) return false;
+
+          const summerAvg = ((sub.consumption.jun || 0) + (sub.consumption.jul || 0) + (sub.consumption.aug || 0)) / 3;
+          const winterAvg = ((sub.consumption.dec || 0) + (sub.consumption.jan || 0) + (sub.consumption.feb || 0)) / 3;
+          
+          if (summerAvg <= 0 || winterAvg <= 0) return false;
+          
+          const ratio = winterAvg / summerAvg;
+          if (ratio < 0.7 || ratio > 1.3) return false;
+          
+          return true;
+      }
+
       // 4. Building Type Filter
       if (buildingTypeFilter !== 'all') {
           if (!sub.baglantiNesnesi) return false;
@@ -109,8 +129,15 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
 
       // Default Logic: Dec == 0 AND Jan == 0 AND Feb == 0
       return dec === 0 && jan === 0 && feb === 0;
-    }).sort((a, b) => (b.consumption.dec || 0) - (a.consumption.dec || 0));
-  }, [subscribers, selectedType, searchQuery, onlyDecActive, buildingTypeFilter, baglantiNesnesiCounts]);
+    }).sort((a, b) => {
+      if (activeTab === 'mustakil-kombi') {
+        const summerA = ((a.consumption.jun || 0) + (a.consumption.jul || 0) + (a.consumption.aug || 0)) / 3;
+        const summerB = ((b.consumption.jun || 0) + (b.consumption.jul || 0) + (b.consumption.aug || 0)) / 3;
+        return summerB - summerA;
+      }
+      return (b.consumption.dec || 0) - (a.consumption.dec || 0);
+    });
+  }, [subscribers, selectedType, searchQuery, onlyDecActive, buildingTypeFilter, baglantiNesnesiCounts, activeTab]);
 
   const isResolvingRef = useRef(false);
 
@@ -168,21 +195,36 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
 
   const handleExport = () => {
     if (filteredData.length === 0) return;
-    const exportData = filteredData.map(row => ({
-      "Tesisat No": row.tesisatNo,
-      "Muhatap No": row.muhatapNo,
-      "Abone Tipi": row.rawAboneTipi,
-      "Adres": row.address,
-      "Aralık (m3)": row.consumption.dec,
-      "Ocak (m3)": row.consumption.jan,
-      "Şubat (m3)": row.consumption.feb,
-      "Durum": isSpecialType(row.rawAboneTipi) ? 'Aralık Var, Ocak/Şubat Yok' : '3 Ay Boyunca Tüketim Yok'
-    }));
+    const exportData = filteredData.map(row => {
+      if (activeTab === 'mustakil-kombi') {
+        const summerAvg = ((row.consumption.jun || 0) + (row.consumption.jul || 0) + (row.consumption.aug || 0)) / 3;
+        const winterAvg = ((row.consumption.dec || 0) + (row.consumption.jan || 0) + (row.consumption.feb || 0)) / 3;
+        return {
+          "Tesisat No": row.tesisatNo,
+          "Muhatap No": row.muhatapNo,
+          "Abone Tipi": row.rawAboneTipi,
+          "Adres": row.address,
+          "Yaz Ortalaması (m3)": summerAvg.toFixed(1),
+          "Kış Ortalaması (m3)": winterAvg.toFixed(1),
+          "Durum": 'YAZ ≈ KIŞ (ŞÜPHELİ)'
+        };
+      }
+      return {
+        "Tesisat No": row.tesisatNo,
+        "Muhatap No": row.muhatapNo,
+        "Abone Tipi": row.rawAboneTipi,
+        "Adres": row.address,
+        "Aralık (m3)": row.consumption.dec,
+        "Ocak (m3)": row.consumption.jan,
+        "Şubat (m3)": row.consumption.feb,
+        "Durum": isSpecialType(row.rawAboneTipi) ? 'Aralık Var, Ocak/Şubat Yok' : '3 Ay Boyunca Tüketim Yok'
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Duran_Sayac_Analizi");
-    XLSX.writeFile(wb, "Duran_Sayac_Raporu.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, activeTab === 'mustakil-kombi' ? "Mustakil_Kombi_Suphelileri" : "Duran_Sayac_Analizi");
+    XLSX.writeFile(wb, activeTab === 'mustakil-kombi' ? "Mustakil_Kombi_Raporu.xlsx" : "Duran_Sayac_Raporu.xlsx");
   };
 
   return (
@@ -190,13 +232,31 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
       
       {/* Header */}
       <div className="px-8 py-6 border-b border-[#F5F5F7] bg-white/80 backdrop-blur-xl sticky top-0 z-10">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shadow-sm">
-            <OctagonPause className="h-6 w-6 text-rose-600" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shadow-sm">
+              <OctagonPause className="h-6 w-6 text-rose-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1D1D1F] tracking-tight">Duran Sayaç Analizi</h2>
+              <p className="text-sm text-[#86868B] font-medium">Kış aylarında tüketimi duran veya hiç olmayan aboneleri tespit eder.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-[#1D1D1F] tracking-tight">Duran Sayaç Analizi</h2>
-            <p className="text-sm text-[#86868B] font-medium">Kış aylarında tüketimi duran veya hiç olmayan aboneleri tespit eder.</p>
+          
+          {/* Tab Switcher */}
+          <div className="flex bg-[#F5F5F7] p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('standard')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'standard' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+            >
+              Standart Analiz
+            </button>
+            <button
+              onClick={() => setActiveTab('mustakil-kombi')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'mustakil-kombi' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+            >
+              Müstakil Kombi Şüphelileri
+            </button>
           </div>
         </div>
 
@@ -237,30 +297,34 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
             </div>
 
             {/* Global Toggle Checkbox */}
-            <div className="flex items-center gap-3 h-[42px] px-4 bg-[#F5F5F7] rounded-xl cursor-pointer hover:bg-rose-50 transition-colors group" onClick={() => setOnlyDecActive(!onlyDecActive)}>
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${onlyDecActive ? 'bg-rose-600 border-rose-600' : 'border-gray-300 bg-white'}`}>
-                    {onlyDecActive && <div className="w-2 h-2 bg-white rounded-sm"></div>}
-                </div>
-                <span className={`text-xs font-bold transition-colors ${onlyDecActive ? 'text-rose-700' : 'text-[#86868B]'}`}>
-                    Ocak/Şubat Kesintisi
-                </span>
-            </div>
+            {activeTab !== 'mustakil-kombi' && (
+              <div className="flex items-center gap-3 h-[42px] px-4 bg-[#F5F5F7] rounded-xl cursor-pointer hover:bg-rose-50 transition-colors group" onClick={() => setOnlyDecActive(!onlyDecActive)}>
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${onlyDecActive ? 'bg-rose-600 border-rose-600' : 'border-gray-300 bg-white'}`}>
+                      {onlyDecActive && <div className="w-2 h-2 bg-white rounded-sm"></div>}
+                  </div>
+                  <span className={`text-xs font-bold transition-colors ${onlyDecActive ? 'text-rose-700' : 'text-[#86868B]'}`}>
+                      Ocak/Şubat Kesintisi
+                  </span>
+              </div>
+            )}
 
             {/* Building Type Filters */}
-            <div className="flex items-center gap-2 bg-[#F5F5F7] p-1 rounded-xl h-[42px]">
-                <button 
-                    onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'mustakil' ? 'all' : 'mustakil')}
-                    className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'mustakil' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
-                >
-                    Müstakil
-                </button>
-                <button 
-                    onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'bina' ? 'all' : 'bina')}
-                    className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'bina' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
-                >
-                    Bina (+4)
-                </button>
-            </div>
+            {activeTab !== 'mustakil-kombi' && (
+              <div className="flex items-center gap-2 bg-[#F5F5F7] p-1 rounded-xl h-[42px]">
+                  <button 
+                      onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'mustakil' ? 'all' : 'mustakil')}
+                      className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'mustakil' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+                  >
+                      Müstakil
+                  </button>
+                  <button 
+                      onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'bina' ? 'all' : 'bina')}
+                      className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'bina' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+                  >
+                      Bina (+4)
+                  </button>
+              </div>
+            )}
           </div>
 
           <button 
@@ -292,7 +356,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                         {filteredData.length} Kayıt Bulundu
                     </span>
                     <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-1 rounded-md font-bold border border-rose-200">
-                        {onlyDecActive ? 'Kritik: Ocak/Şubat Kesintisi' : 'Kritik: Tüketim Kesintisi'}
+                        {activeTab === 'mustakil-kombi' ? 'Kritik: Yaz ≈ Kış Tüketimi' : (onlyDecActive ? 'Kritik: Ocak/Şubat Kesintisi' : 'Kritik: Tüketim Kesintisi')}
                     </span>
                 </div>
                 <table className="w-full text-left text-sm">
@@ -300,9 +364,18 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                         <tr>
                             <th className="px-6 py-4">Tesisat Bilgisi</th>
                             <th className="px-6 py-4">Yapı Tipi</th>
-                            <th className="px-6 py-4">Aralık</th>
-                            <th className="px-6 py-4">Ocak</th>
-                            <th className="px-6 py-4">Şubat</th>
+                            {activeTab === 'mustakil-kombi' ? (
+                                <>
+                                    <th className="px-6 py-4">Yaz Ortalaması</th>
+                                    <th className="px-6 py-4">Kış Ortalaması</th>
+                                </>
+                            ) : (
+                                <>
+                                    <th className="px-6 py-4">Aralık</th>
+                                    <th className="px-6 py-4">Ocak</th>
+                                    <th className="px-6 py-4">Şubat</th>
+                                </>
+                            )}
                             <th className="px-6 py-4">Durum</th>
                             <th className="px-6 py-4">Adres</th>
                         </tr>
@@ -312,6 +385,9 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                             const bCount = row.baglantiNesnesi ? (baglantiNesnesiCounts[row.baglantiNesnesi] || 0) : 0;
                             const isBina = bCount > 4;
                             const isMustakil = bCount === 1;
+
+                            const summerAvg = ((row.consumption.jun || 0) + (row.consumption.jul || 0) + (row.consumption.aug || 0)) / 3;
+                            const winterAvg = ((row.consumption.dec || 0) + (row.consumption.jan || 0) + (row.consumption.feb || 0)) / 3;
 
                             return (
                                 <tr key={idx} className="hover:bg-rose-50/30 transition-colors group">
@@ -340,27 +416,44 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`font-mono font-bold ${row.consumption.dec === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                            {row.consumption.dec}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`font-mono font-bold ${row.consumption.jan === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                            {row.consumption.jan}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`font-mono font-bold ${row.consumption.feb === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                            {row.consumption.feb}
-                                        </span>
-                                    </td>
+                                    {activeTab === 'mustakil-kombi' ? (
+                                        <>
+                                            <td className="px-6 py-4">
+                                                <span className="font-mono font-bold text-orange-500">
+                                                    {summerAvg.toFixed(1)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="font-mono font-bold text-blue-500">
+                                                    {winterAvg.toFixed(1)}
+                                                </span>
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td className="px-6 py-4">
+                                                <span className={`font-mono font-bold ${row.consumption.dec === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                                    {row.consumption.dec}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`font-mono font-bold ${row.consumption.jan === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                                    {row.consumption.jan}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`font-mono font-bold ${row.consumption.feb === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                                    {row.consumption.feb}
+                                                </span>
+                                            </td>
+                                        </>
+                                    )}
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 w-fit">
-                                                {isSpecialType(row.rawAboneTipi) ? 'Ocak/Şubat Yok' : '3 Ay Yok'}
+                                                {activeTab === 'mustakil-kombi' ? 'YAZ ≈ KIŞ' : (isSpecialType(row.rawAboneTipi) ? 'Ocak/Şubat Yok' : '3 Ay Yok')}
                                             </span>
-                                            {isBina && (
+                                            {isBina && activeTab !== 'mustakil-kombi' && (
                                                 <span className="text-[9px] text-rose-500 font-bold uppercase tracking-tighter">
                                                     Kritik: Bina İçi Tekil Durma
                                                 </span>
