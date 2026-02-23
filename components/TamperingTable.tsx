@@ -26,8 +26,8 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
   // FILTER & SORT
   const filteredData = data.filter(row => row.tesisatNo.includes(searchQuery));
   
-  // SORTING LOGIC: Sort by heatingSensitivity ASCENDING (Lowest ratio is higher risk)
-  const sortedData = [...filteredData].sort((a, b) => a.heatingSensitivity - b.heatingSensitivity);
+  // SORTING LOGIC: Sort by summerAvg DESCENDING (Highest summer average is at the top)
+  const sortedData = [...filteredData].sort((a, b) => b.seasonalStats.summerAvg - a.seasonalStats.summerAvg);
   const visibleData = sortedData.slice(0, visibleCount);
 
   const handleExport = () => {
@@ -85,9 +85,9 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
 
              <div className="flex flex-col text-right">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    Sıralama: Artış Katsayısı
+                    Sıralama: Yaz Ortalaması
                 </span>
-                <span className="text-[9px] text-slate-500">En Düşük &rarr; En Yüksek</span>
+                <span className="text-[9px] text-slate-500">En Yüksek &rarr; En Düşük</span>
             </div>
         </div>
       </div>

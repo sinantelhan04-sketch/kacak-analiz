@@ -12,6 +12,7 @@ import BuildingAnalysisTable from './components/BuildingAnalysisTable';
 import WeatherAnalysisView from './components/WeatherAnalysisView';
 import HotspotPanel from './components/HotspotPanel';
 import AiReportView from './components/AiReportView';
+import StoppedMeterView from './components/StoppedMeterView';
 import Sidebar from './components/Sidebar';
 import DashboardChart from './components/DashboardChart';
 import ExplainerModal from './components/ExplainerModal';
@@ -24,7 +25,7 @@ import { processFiles } from './utils/dataLoader';
 const App: React.FC = () => {
   // Stages: setup (upload) -> dashboard (loaded but idle) -> analyzing (processing)
   const [appStage, setAppStage] = useState<'setup' | 'dashboard'>('setup');
-  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather'>('general');
+  const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather' | 'stopped'>('general');
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
@@ -493,6 +494,7 @@ const App: React.FC = () => {
                         {dashboardView === 'georisk' && 'Coğrafi Risk Haritası'}
                         {dashboardView === 'building' && 'Bina Tüketimi (Komşu Analizi)'}
                         {dashboardView === 'weather' && 'Hava Koşulları Analizi'}
+                        {dashboardView === 'stopped' && 'Duran Sayaç Analizi'}
                         {dashboardView === 'tampering' && 'Müdahale Analizi'}
                         {dashboardView === 'inconsistent' && 'Tutarsız Kış Tüketimi'}
                         {dashboardView === 'rule120' && '120 sm³ Kuralı'}
@@ -654,6 +656,13 @@ const App: React.FC = () => {
                 {dashboardView === 'weather' && (
                     <div className="h-full animate-slide-up">
                         <WeatherAnalysisView subscribers={rawSubscribers} />
+                    </div>
+                )}
+
+                {/* STOPPED METER VIEW (NEW) */}
+                {dashboardView === 'stopped' && (
+                    <div className="h-full animate-slide-up">
+                        <StoppedMeterView subscribers={rawSubscribers} />
                     </div>
                 )}
 

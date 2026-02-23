@@ -14,22 +14,10 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(50);
   const [onlyDecActive, setOnlyDecActive] = useState(false);
+  const [buildingTypeFilter, setBuildingTypeFilter] = useState<'all' | 'mustakil' | 'bina'>('all');
   
   // NEW: Location resolution state
   const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
-
-  // Helper to parse address string (Last 3 words: District, City, Country)
-  const parseAddressInfo = (address: string) => {
-    if (!address) return null;
-    const parts = address.trim().split(/\s+/);
-    if (parts.length < 3) return null;
-    
-    return {
-      district: parts[parts.length - 3].replace(/[,.;]$/, ''),
-      city: parts[parts.length - 2].replace(/[,.;]$/, ''),
-      country: parts[parts.length - 1].replace(/[,.;]$/, '')
-    };
-  };
 
   // Extract unique raw subscriber types for the dropdown
   const subscriberTypes = useMemo(() => {
@@ -40,6 +28,17 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
       }
     });
     return Array.from(types).sort();
+  }, [subscribers]);
+  
+  // Calculate baglantiNesnesi counts for filtering
+  const baglantiNesnesiCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    subscribers.forEach(sub => {
+      if (sub.baglantiNesnesi) {
+        counts[sub.baglantiNesnesi] = (counts[sub.baglantiNesnesi] || 0) + 1;
+      }
+    });
+    return counts;
   }, [subscribers]);
 
   // Helper to check for special type
@@ -88,6 +87,14 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
           return false;
       }
 
+      // 4. Building Type Filter
+      if (buildingTypeFilter !== 'all') {
+          if (!sub.baglantiNesnesi) return false;
+          const count = baglantiNesnesiCounts[sub.baglantiNesnesi] || 0;
+          if (buildingTypeFilter === 'mustakil' && count !== 1) return false;
+          if (buildingTypeFilter === 'bina' && count <= 4) return false;
+      }
+
       // If global toggle is active, apply "Dec > 0, Jan/Feb == 0" to everyone
       if (onlyDecActive) {
           return dec > 0 && jan === 0 && feb === 0;
@@ -103,19 +110,20 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
       // Default Logic: Dec == 0 AND Jan == 0 AND Feb == 0
       return dec === 0 && jan === 0 && feb === 0;
     }).sort((a, b) => (b.consumption.dec || 0) - (a.consumption.dec || 0));
-  }, [subscribers, selectedType, searchQuery, onlyDecActive]);
+  }, [subscribers, selectedType, searchQuery, onlyDecActive, buildingTypeFilter, baglantiNesnesiCounts]);
 
   const isResolvingRef = useRef(false);
+
+  const visibleData = filteredData.slice(0, visibleCount);
 
   // Automatically resolve locations that need it using OSM Nominatim
   useEffect(() => {
     if (isResolvingRef.current) return;
 
-    const resolveNeeded = filteredData.filter(sub => {
-      const hasGenericDistrict = sub.district === 'Türkiye / Bölge' || sub.district === 'Diğer' || !sub.district;
+    const resolveNeeded = visibleData.filter(sub => {
       const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
       const hasLocation = sub.location && sub.location.lat !== 0;
-      return hasGenericDistrict && notResolvedYet && hasLocation;
+      return notResolvedYet && hasLocation;
     }).slice(0, 3); // Small batch to respect rate limits
 
     if (resolveNeeded.length === 0) return;
@@ -152,9 +160,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
     };
 
     resolveAll();
-  }, [filteredData, resolvedMap]);
-
-  const visibleData = filteredData.slice(0, visibleCount);
+  }, [visibleData, resolvedMap]);
 
   const handleShowMore = () => {
     setVisibleCount(prev => prev + 50);
@@ -239,6 +245,22 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                     Ocak/Şubat Kesintisi
                 </span>
             </div>
+
+            {/* Building Type Filters */}
+            <div className="flex items-center gap-2 bg-[#F5F5F7] p-1 rounded-xl h-[42px]">
+                <button 
+                    onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'mustakil' ? 'all' : 'mustakil')}
+                    className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'mustakil' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+                >
+                    Müstakil
+                </button>
+                <button 
+                    onClick={() => setBuildingTypeFilter(buildingTypeFilter === 'bina' ? 'all' : 'bina')}
+                    className={`px-4 h-full rounded-lg text-xs font-bold transition-all ${buildingTypeFilter === 'bina' ? 'bg-white text-rose-600 shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+                >
+                    Bina (+4)
+                </button>
+            </div>
           </div>
 
           <button 
@@ -277,7 +299,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                     <thead className="bg-gray-50 text-[#86868B] uppercase text-[10px] font-bold tracking-wider border-b border-gray-100">
                         <tr>
                             <th className="px-6 py-4">Tesisat Bilgisi</th>
-                            <th className="px-6 py-4">Abone Tipi</th>
+                            <th className="px-6 py-4">Yapı Tipi</th>
                             <th className="px-6 py-4">Aralık</th>
                             <th className="px-6 py-4">Ocak</th>
                             <th className="px-6 py-4">Şubat</th>
@@ -286,41 +308,66 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                        {visibleData.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-rose-50/30 transition-colors group">
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-[#1D1D1F] font-mono">{row.tesisatNo}</span>
-                                        <span className="text-xs text-gray-400">{row.muhatapNo}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        {row.aboneTipi === 'Commercial' ? <Building2 className="h-3.5 w-3.5 text-orange-500" /> : <User className="h-3.5 w-3.5 text-blue-500" />}
-                                        <span className="text-xs font-medium text-gray-700">{row.rawAboneTipi || row.aboneTipi}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`font-mono font-bold ${row.consumption.dec === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                        {row.consumption.dec}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`font-mono font-bold ${row.consumption.jan === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                        {row.consumption.jan}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`font-mono font-bold ${row.consumption.feb === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                        {row.consumption.feb}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100">
-                                        {isSpecialType(row.rawAboneTipi) ? 'Ocak/Şubat Yok' : '3 Ay Yok'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
+                        {visibleData.map((row, idx) => {
+                            const bCount = row.baglantiNesnesi ? (baglantiNesnesiCounts[row.baglantiNesnesi] || 0) : 0;
+                            const isBina = bCount > 4;
+                            const isMustakil = bCount === 1;
+
+                            return (
+                                <tr key={idx} className="hover:bg-rose-50/30 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-[#1D1D1F] font-mono">{row.tesisatNo}</span>
+                                            <span className="text-xs text-gray-400">{row.muhatapNo}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {isMustakil ? (
+                                                    <User className="h-3.5 w-3.5 text-blue-500" />
+                                                ) : (
+                                                    <Building2 className="h-3.5 w-3.5 text-orange-500" />
+                                                )}
+                                                <span className="text-xs font-bold text-gray-700">
+                                                    {isMustakil ? 'Müstakil' : isBina ? 'Bina (+4)' : 'Apartman'}
+                                                </span>
+                                            </div>
+                                            {bCount > 1 && (
+                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                    {bCount} Abone Mevcut
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`font-mono font-bold ${row.consumption.dec === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                            {row.consumption.dec}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`font-mono font-bold ${row.consumption.jan === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                            {row.consumption.jan}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`font-mono font-bold ${row.consumption.feb === 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                            {row.consumption.feb}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 w-fit">
+                                                {isSpecialType(row.rawAboneTipi) ? 'Ocak/Şubat Yok' : '3 Ay Yok'}
+                                            </span>
+                                            {isBina && (
+                                                <span className="text-[9px] text-rose-500 font-bold uppercase tracking-tighter">
+                                                    Kritik: Bina İçi Tekil Durma
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
                                     <div className="flex flex-col max-w-xs">
                                         <div className="flex items-center gap-1 text-[#1D1D1F] font-bold mb-0.5">
                                             <MapPin className="h-3 w-3 text-rose-500" />
@@ -335,11 +382,11 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                             </span>
                                         </div>
                                         <a 
-                                            href={`https://maps.apple.com/?q=${row.location.lat},${row.location.lng}`}
+                                            href={`https://www.google.com/maps/search/?api=1&query=${row.location.lat},${row.location.lng}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-[10px] text-gray-400 truncate hover:text-rose-600 hover:underline transition-colors flex items-center gap-1" 
-                                            title="Apple Haritalarda Aç"
+                                            title="Google Haritalarda Aç"
                                         >
                                             {(() => {
                                                 const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
@@ -351,9 +398,10 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                     </div>
                                 </td>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        );
+                    })}
+                </tbody>
+            </table>
                 {visibleCount < filteredData.length && (
                     <div className="p-4 border-t border-gray-100 flex justify-center">
                         <button 
