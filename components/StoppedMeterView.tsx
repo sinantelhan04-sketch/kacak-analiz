@@ -3,7 +3,7 @@ import { Subscriber } from '../types';
 import { OctagonPause, Search, Download, Filter, Building2, User, ChevronDown, AlertCircle, MapPin } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { identifyDistrictGeometric } from '../utils/fraudEngine';
-import { resolveLocation, ResolvedLocation } from '../services/locationService';
+import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
 
 interface StoppedMeterViewProps {
   subscribers: Subscriber[];
@@ -167,17 +167,17 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
 
         try {
           // Resolve by lat/lng only as per user request
-          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
 
           if (result) {
-            console.log(`Resolved ${key} to ${result.district} / ${result.city}`);
+            console.log(`OSM Resolved ${key} to ${result.district} / ${result.city}`);
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             // Mark as failed to avoid retrying immediately
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("Resolution error:", err);
+          console.error("OSM resolution error:", err);
         }
 
         // Nominatim strict rate limit: 1 request per second
@@ -482,38 +482,27 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                                 })()}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <a 
-                                                href={`https://www.google.com/maps/search/?api=1&query=${row.location.lat},${row.location.lng}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[10px] text-gray-400 truncate hover:text-rose-600 hover:underline transition-colors flex items-center gap-1" 
-                                                title={(() => {
-                                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                                    return resolved?.fullName || 'Google Haritalarda Aç';
-                                                })()}
-                                            >
-                                                {(() => {
-                                                    const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                                    if (resolved) {
-                                                        const addr = resolved.fullName?.split(',') || [];
-                                                        return addr[0] || 'Haritada Gör';
-                                                    }
-                                                    return 'Haritada Gör';
-                                                })()}
-                                                <AlertCircle className="h-2 w-2" />
-                                            </a>
-                                            <span className="text-gray-300">|</span>
-                                            <a 
-                                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[10px] text-blue-400 hover:text-blue-600 hover:underline transition-colors font-bold"
-                                                title="HGM Geoportal'da Doğrula"
-                                            >
-                                                HGM
-                                            </a>
-                                        </div>
+                                        <a 
+                                            href={`https://www.google.com/maps/search/?api=1&query=${row.location.lat},${row.location.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] text-gray-400 truncate hover:text-rose-600 hover:underline transition-colors flex items-center gap-1" 
+                                            title={(() => {
+                                                const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                                return resolved?.fullName || 'Google Haritalarda Aç';
+                                            })()}
+                                        >
+                                            {(() => {
+                                                const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                                if (resolved) {
+                                                    // Show neighborhood or street if available
+                                                    const addr = resolved.fullName?.split(',') || [];
+                                                    return addr[0] || 'Haritada Gör';
+                                                }
+                                                return 'Haritada Gör';
+                                            })()}
+                                            <AlertCircle className="h-2 w-2" />
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
 import { MapPin, AlertTriangle, Building2, User, ChevronDown, Download, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { resolveLocation, ResolvedLocation } from '../services/locationService';
+import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
 
 interface GeoRiskTableProps {
   data: RiskScore[];
@@ -49,14 +49,14 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
         if (resolvedMap[key]) continue;
 
         try {
-          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
           if (result) {
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("Resolution error:", err);
+          console.error("OSM resolution error:", err);
         }
         await new Promise(resolve => setTimeout(resolve, 1100));
       }
@@ -193,21 +193,9 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
                                 })()}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 ml-5">
-                            <span className="text-[10px] text-slate-400 font-mono">
-                                {row.location.lat.toFixed(5)}, {row.location.lng.toFixed(5)}
-                            </span>
-                            <span className="text-slate-300 text-[10px]">|</span>
-                            <a 
-                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-blue-500 hover:underline font-bold"
-                                title="HGM Geoportal'da Doğrula"
-                            >
-                                HGM
-                            </a>
-                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono mt-0.5 ml-5">
+                            {row.location.lat.toFixed(5)}, {row.location.lng.toFixed(5)}
+                        </span>
                      </div>
                 </td>
                 <td className="px-6 py-4">

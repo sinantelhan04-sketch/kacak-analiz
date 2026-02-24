@@ -2,8 +2,6 @@
 
 
 import { Subscriber, RiskScore, BuildingRisk, MonthlyData } from '../types';
-import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { point } from '@turf/helpers';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
 // Format: [Lat, Lng]
@@ -93,30 +91,12 @@ export const isPointInPolygon = (lat: number, lng: number, polygon: [number, num
   return inside;
 };
 
-export const identifyDistrictGeometric = (lat: number, lng: number, hgmData?: any): string => {
-  // 1. Try HGM Data if available
-  if (hgmData) {
-      try {
-          const pt = point([lng, lat]);
-          const features = hgmData.features || (Array.isArray(hgmData) ? hgmData : []);
-          for (const feature of features) {
-              if (booleanPointInPolygon(pt, feature)) {
-                  // Try to find district name in properties
-                  const props = feature.properties || {};
-                  return props.NAME || props.AD || props.ILCE_ADI || props.DISTRICT || props.Detay_Adı || 'HGM Bölgesi';
-              }
-          }
-      } catch (err) {
-          console.error("HGM Point-in-polygon error:", err);
-      }
-  }
-
-  // 2. Fallback to hardcoded Istanbul districts
+export const identifyDistrictGeometric = (lat: number, lng: number): string => {
   for (const [name, poly] of Object.entries(ISTANBUL_DISTRICTS)) {
     if (isPointInPolygon(lat, lng, poly)) return name;
   }
   
-  // 3. Check if within Turkey's general boundaries
+  // Check if within Turkey's general boundaries
   if (lat >= 35.5 && lat <= 42.5 && lng >= 25.5 && lng <= 45.0) {
       // Specific coordinate checks for common regions if needed
       if (lat >= 39.5 && lat <= 39.8 && lng >= 43.2 && lng <= 43.5) return 'Hamur / Ağrı';
@@ -299,13 +279,12 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
 export const createBaseRiskScore = (
     sub: Subscriber, 
     fraudMuhatapIds: Set<string>,
-    fraudTesisatIds: Set<string>,
-    hgmData?: any
+    fraudTesisatIds: Set<string>
 ): RiskScore => {
     // 1. 1. Try to use explicit district from Excel. 2. Fallback to geometric check.
     let district = sub.district;
     if (!district || district.trim() === '') {
-        district = identifyDistrictGeometric(sub.location.lat, sub.location.lng, hgmData);
+        district = identifyDistrictGeometric(sub.location.lat, sub.location.lng);
     } else {
         // Normalize district name (Title Case)
         district = district.toLocaleUpperCase('tr');

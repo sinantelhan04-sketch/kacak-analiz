@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
-import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download, Search } from 'lucide-react';
+import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download, Search, MapPin } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { resolveLocation, ResolvedLocation } from '../services/locationService';
+import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
 
 interface TamperingTableProps {
   data: RiskScore[];
@@ -52,14 +52,14 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
         if (resolvedMap[key]) continue;
 
         try {
-          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
           if (result) {
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("Resolution error:", err);
+          console.error("OSM resolution error:", err);
         }
         await new Promise(resolve => setTimeout(resolve, 1100));
       }
@@ -156,23 +156,17 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
                     <div className="flex flex-col">
                         <span className="font-bold text-slate-800 group-hover:text-black font-mono transition-colors">{row.tesisatNo}</span>
                         <span className="text-xs text-slate-400 font-mono mt-0.5">{row.muhatapNo}</span>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1 mt-1" title={(() => {
+                            const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                            return resolved?.fullName || 'Konum Belirleniyor...';
+                        })()}>
+                            <MapPin className="h-3 w-3 text-orange-400" />
                             <span className="text-[10px] text-slate-500 font-medium">
                                 {(() => {
                                     const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
                                     return resolved?.district || row.district || 'Belirleniyor...';
                                 })()}
                             </span>
-                            <span className="text-slate-300 text-[10px]">|</span>
-                            <a 
-                                href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-blue-500 hover:underline font-bold"
-                                title="HGM Geoportal'da Doğrula"
-                            >
-                                HGM
-                            </a>
                         </div>
                     </div>
                 </td>

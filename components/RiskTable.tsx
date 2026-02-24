@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
 import { AlertTriangle, MapPin, User, Building2, ThermometerSnowflake, Wrench, Activity, Ban, ChevronDown, Search } from 'lucide-react';
-import { resolveLocation, ResolvedLocation } from '../services/locationService';
+import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
 
 interface RiskTableProps {
   data: RiskScore[];
@@ -51,14 +51,14 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
         if (resolvedMap[key]) continue;
 
         try {
-          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
           if (result) {
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("Resolution error:", err);
+          console.error("OSM resolution error:", err);
         }
         await new Promise(resolve => setTimeout(resolve, 1100));
       }
@@ -167,21 +167,9 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                                   return resolved?.district || row.district || 'Belirleniyor...';
                               })()}
                           </span>
-                          <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-[#86868B] font-mono">
-                                  {row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}
-                              </span>
-                              <span className="text-gray-300 text-[10px]">|</span>
-                              <a 
-                                  href={`https://geoportal.harita.gov.tr/#/map?center=${row.location.lng},${row.location.lat}&zoom=16`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-blue-500 hover:underline font-bold"
-                                  title="HGM Geoportal'da Doğrula"
-                              >
-                                  HGM
-                              </a>
-                          </div>
+                          <span className="text-[10px] text-[#86868B] font-mono mt-0.5">
+                              {row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}
+                          </span>
                       </div>
                   ) : (
                       <span className="text-xs text-gray-300">—</span>
