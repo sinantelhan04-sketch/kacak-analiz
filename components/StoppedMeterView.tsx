@@ -3,7 +3,7 @@ import { Subscriber } from '../types';
 import { OctagonPause, Search, Download, Filter, Building2, User, ChevronDown, AlertCircle, MapPin } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { identifyDistrictGeometric } from '../utils/fraudEngine';
-import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface StoppedMeterViewProps {
   subscribers: Subscriber[];
@@ -167,17 +167,17 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
 
         try {
           // Resolve by lat/lng only as per user request
-          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
 
           if (result) {
-            console.log(`OSM Resolved ${key} to ${result.district} / ${result.city}`);
+            console.log(`Location Resolved ${key} to ${result.district} / ${result.city}`);
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             // Mark as failed to avoid retrying immediately
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("OSM resolution error:", err);
+          console.error("Location resolution error:", err);
         }
 
         // Nominatim strict rate limit: 1 request per second
@@ -475,10 +475,10 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                             })()}>
                                                 {(() => {
                                                     const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                                    if (resolved) return resolved.district || 'Bilinmiyor';
+                                                    if (resolved) return `${resolved.district} / ${resolved.city}`;
                                                     
                                                     // Fallback to geometric identification if OSM not yet resolved
-                                                    return identifyDistrictGeometric(row.location.lat, row.location.lng) || 'Konum Belirleniyor...';
+                                                    return row.district || identifyDistrictGeometric(row.location.lat, row.location.lng) || 'Konum Belirleniyor...';
                                                 })()}
                                             </span>
                                         </div>

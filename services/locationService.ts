@@ -17,11 +17,11 @@ export interface ResolvedLocation {
 export const resolveLocationOSM = async (
   lat: number,
   lng: number,
-  options: { cacheTimeout?: number } = {}
+  options: { signal?: AbortSignal; cacheTimeout?: number } = {}
 ): Promise<ResolvedLocation | null> => {
   // Çok basit bir in-memory cache (gerçek projede localStorage veya ayrı cache servisi olmalı)
   const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const cached = window.sessionStorage.getItem(cacheKey);
+  const cached = sessionStorage.getItem(cacheKey);
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
@@ -29,9 +29,9 @@ export const resolveLocationOSM = async (
       if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
         return parsed.data;
       }
-    } catch (e) {
-      // Ignore parse errors
-    }
+      } catch {
+        // ignore parse errors
+      }
   }
 
   const url = new URL("https://nominatim.openstreetmap.org/reverse");
@@ -40,12 +40,13 @@ export const resolveLocationOSM = async (
   url.searchParams.set("lon", lng.toString());
   url.searchParams.set("addressdetails", "1");
   url.searchParams.set("accept-language", "tr");
-  url.searchParams.set("zoom", "18");           // Sokak/Bina seviyesine kadar detay için
+  url.searchParams.set("zoom", "14");           // ilçe seviyesine yakınlaştırmak için
   // email yerine gerçekten çalışan User-Agent benzeri bir şey (Nominatim bunu daha çok dikkate alır)
   url.searchParams.set("email", "kacak-analiz@example.com");
 
   try {
-    const response = await window.fetch(url, {
+    const response = await fetch(url, {
+      signal: options.signal,
       headers: {
         // Nominatim kuralları: gerçek User-Agent koymak önemli
         "User-Agent": "KacakAnaliz/1.0 (kacak-analiz@example.com)",
@@ -142,7 +143,7 @@ export const resolveLocationOSM = async (
     };
 
     // Cache'e yaz
-    window.sessionStorage.setItem(
+    sessionStorage.setItem(
       cacheKey,
       JSON.stringify({
         timestamp: Date.now(),
@@ -152,7 +153,7 @@ export const resolveLocationOSM = async (
 
     return result;
   } catch (err) {
-    if (err instanceof window.DOMException && err.name === "AbortError") {
+    if (err instanceof DOMException && err.name === "AbortError") {
       return null; // kullanıcı iptal etti
     }
     console.error("[resolveLocationOSM]", err);

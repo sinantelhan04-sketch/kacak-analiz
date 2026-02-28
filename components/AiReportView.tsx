@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrainCircuit, Loader2, RefreshCw, FileText, CheckCircle2, AlertTriangle, Lightbulb } from 'lucide-react';
+import { BrainCircuit, Loader2, RefreshCw, Lightbulb } from 'lucide-react';
 import { EngineStats, RiskScore } from '../types';
 
 interface AiReportViewProps {

@@ -1,7 +1,7 @@
 
 import React, { useMemo, useEffect } from 'react';
 import { RiskScore, Hotspot, ReferenceLocation } from '../types';
-import { AlertTriangle, MapPin, Search, ChevronDown, X } from 'lucide-react';
+import { AlertTriangle, Search, ChevronDown, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ISTANBUL_DISTRICTS } from '../utils/fraudEngine';

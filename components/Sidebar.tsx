@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, Activity, BrainCircuit, Building2, CloudSun, OctagonPause } from 'lucide-react';
+import { LayoutDashboard, MapPin, Wrench, TrendingDown, Gauge, Download, ShieldCheck, RefreshCw, BrainCircuit, Building2, CloudSun, OctagonPause } from 'lucide-react';
 
 interface SidebarProps {
   currentView: 'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather' | 'stopped';

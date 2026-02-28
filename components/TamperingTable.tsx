@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RiskScore } from '../types';
 import { Wrench, ArrowDownRight, ThermometerSnowflake, ThermometerSun, ChevronDown, Download, Search, MapPin } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { resolveLocationOSM, ResolvedLocation } from '../services/locationService';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface TamperingTableProps {
   data: RiskScore[];
@@ -52,14 +52,14 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
         if (resolvedMap[key]) continue;
 
         try {
-          const result = await resolveLocationOSM(sub.location.lat, sub.location.lng);
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
           if (result) {
             setResolvedMap(prev => ({ ...prev, [key]: result }));
           } else {
             setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
           }
         } catch (err) {
-          console.error("OSM resolution error:", err);
+          console.error("Location resolution error:", err);
         }
         await new Promise(resolve => setTimeout(resolve, 1100));
       }
@@ -164,7 +164,8 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
                             <span className="text-[10px] text-slate-500 font-medium">
                                 {(() => {
                                     const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                    return resolved?.district || row.district || 'Belirleniyor...';
+                                    if (resolved) return `${resolved.district} / ${resolved.city}`;
+                                    return row.district || 'Belirleniyor...';
                                 })()}
                             </span>
                         </div>

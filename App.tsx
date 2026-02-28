@@ -1,7 +1,7 @@
 
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, X, Building2, ChevronRight, Command } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, Building2, ChevronRight } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -29,8 +29,6 @@ const App: React.FC = () => {
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
-  const [refMuhatapIds, setRefMuhatapIds] = useState<Set<string>>(new Set());
-  const [refTesisatIds, setRefTesisatIds] = useState<Set<string>>(new Set());
   const [refLocations, setRefLocations] = useState<ReferenceLocation[]>([]); 
 
   // ANALYSIS RESULT STATE
@@ -61,7 +59,6 @@ const App: React.FC = () => {
   // Progress states
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingStatusText, setLoadingStatusText] = useState<string>("Hazırlanıyor...");
-  const [isReadingFile, setIsReadingFile] = useState<'a' | 'b' | null>(null);
   const [duplicateInfo, setDuplicateInfo] = useState<{totalRows: number, uniqueSubs: number} | null>(null);
 
   // File Refs for UI state (names)
@@ -78,7 +75,6 @@ const App: React.FC = () => {
     setLoadingProgress(0);
     setLoadingStatusText("Hazırlanıyor...");
     setDuplicateInfo(null);
-    setIsReadingFile('a'); // Just to show activity spinner
     setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false });
     setBuildingRiskData([]);
 
@@ -90,7 +86,6 @@ const App: React.FC = () => {
              return;
         }
         setValidationError("Lütfen her iki dosyayı da yükleyiniz.");
-        setIsReadingFile(null);
         return;
     }
 
@@ -113,7 +108,6 @@ const App: React.FC = () => {
         console.error("Processing Error:", err);
         setValidationError("Veri işleme sırasında hata oluştu: " + (err.message || "Bilinmeyen hata"));
         setLoadingProgress(0);
-        setIsReadingFile(null);
     }
   };
 
@@ -184,8 +178,6 @@ const App: React.FC = () => {
       setAvailableDistricts(Array.from(districtSet).sort());
       
       setRawSubscribers(data.subscribers);
-      setRefMuhatapIds(data.refMuhatapIds);
-      setRefTesisatIds(data.refTesisatIds);
       setRefLocations(data.refLocations); 
       setRiskData(initialRisks);
       updateStats(initialRisks);
@@ -195,7 +187,6 @@ const App: React.FC = () => {
 
       setLoadingProgress(100);
       setAppStage('dashboard'); 
-      setIsReadingFile(null);
   };
 
   // --- ON-DEMAND ANALYSIS RUNNER ---

@@ -1,6 +1,22 @@
 
 import * as XLSX from 'xlsx';
+import proj4 from 'proj4';
 import type { Subscriber, ReferenceLocation, MonthlyData } from '../types';
+
+// --- HGM PROJECTION DEFINITION ---
+// Lambert Conformal Conic TC1M (Turkey)
+const HGM_PROJ = '+proj=lcc +lat_1=35 +lat_2=41 +lat_0=0 +lon_0=35 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs';
+const WGS84_PROJ = 'WGS84';
+
+const convertHgmToWgs84 = (x: number, y: number): { lat: number, lng: number } => {
+    try {
+        const [lng, lat] = proj4(HGM_PROJ, WGS84_PROJ, [x, y]);
+        return { lat, lng };
+    } catch (err) {
+        console.error("Coordinate conversion error:", err);
+        return { lat: 0, lng: 0 };
+    }
+};
 
 // --- HELPER FUNCTIONS ---
 
@@ -121,7 +137,7 @@ export const processFiles = async (
     refMuhatapIds: Set<string>, 
     refTesisatIds: Set<string>, 
     refLocations: ReferenceLocation[], 
-    rawCount: number 
+    rawCount: number
 }> => {
 
     // --- 1. PROCESS FILE A (Reference) ---
@@ -193,6 +209,8 @@ export const processFiles = async (
         const idxType = getColIndex(headers, ['abone tipi', 'tip', 'abone', 'abonetipi']);
         const idxLat = getColIndex(headers, ['enlem', 'lat', 'latitude']);
         const idxLng = getColIndex(headers, ['boylam', 'lng', 'long', 'longitude']);
+        const idxX = getColIndex(headers, ['hgm_x', 'x_coord', 'x']);
+        const idxY = getColIndex(headers, ['hgm_y', 'y_coord', 'y']);
         const idxCity = getColIndex(headers, ['il', 'sehir', 'city', 'vilayet']);
         const idxDistrict = getColIndex(headers, ['ilce', 'district', 'bolge']);
         const idxAddress = getColIndex(headers, ['adres', 'address', 'tam adres', 'acik adres']);
@@ -232,12 +250,26 @@ export const processFiles = async (
                 const initMuhatap = idxMuhatap !== -1 ? cleanVal(row[idxMuhatap]) : `M-${rawId}`;
                 const baglantiVal = idxBaglanti !== -1 ? cleanVal(row[idxBaglanti]) : '';
 
+                let lat = idxLat !== -1 ? parseNum(row[idxLat]) : 0;
+                let lng = idxLng !== -1 ? parseNum(row[idxLng]) : 0;
+
+                // If lat/lng are missing but X/Y are present, convert from HGM
+                if (lat === 0 && lng === 0 && idxX !== -1 && idxY !== -1) {
+                    const x = parseNum(row[idxX]);
+                    const y = parseNum(row[idxY]);
+                    if (x !== 0 && y !== 0) {
+                        const converted = convertHgmToWgs84(x, y);
+                        lat = converted.lat;
+                        lng = converted.lng;
+                    }
+                }
+
                 subscriberMap.set(id, {
                     tesisatNo: rawId, muhatapNo: initMuhatap, 
                     baglantiNesnesi: baglantiVal,
                     relatedMuhatapNos: [initMuhatap],
                     address: idxAddress !== -1 ? cleanVal(row[idxAddress]) : '', 
-                    location: { lat: idxLat !== -1 ? parseNum(row[idxLat]) : 0, lng: idxLng !== -1 ? parseNum(row[idxLng]) : 0 },
+                    location: { lat, lng },
                     city: idxCity !== -1 ? cleanVal(row[idxCity]) : '',
                     district: idxDistrict !== -1 ? cleanVal(row[idxDistrict]) : '',
                     aboneTipi: isCommercial ? 'Commercial' : 'Residential',
@@ -291,6 +323,6 @@ export const processFiles = async (
         refMuhatapIds, 
         refTesisatIds, 
         refLocations, 
-        rawCount: totalRows 
+        rawCount: totalRows
     };
 };

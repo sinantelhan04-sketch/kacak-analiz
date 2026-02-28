@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BuildingRisk } from '../types';
 import { Building2, ArrowDown, MapPin, ChevronDown, Download, Users, Search, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface BuildingAnalysisTableProps {
   data: BuildingRisk[];
@@ -12,6 +13,8 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
   const [minDeviation, setMinDeviation] = useState<number>(0);
+  const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
+  const isResolvingRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -34,21 +37,60 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
   
   const visibleData = filteredData.slice(0, visibleCount);
 
+  // Automatically resolve locations that need it using OSM Nominatim
+  useEffect(() => {
+    if (isResolvingRef.current) return;
+
+    const resolveNeeded = visibleData.filter(sub => {
+      const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
+      const hasLocation = sub.location && sub.location.lat !== 0;
+      return notResolvedYet && hasLocation;
+    }).slice(0, 5);
+
+    if (resolveNeeded.length === 0) return;
+
+    const resolveAll = async () => {
+      isResolvingRef.current = true;
+      for (const sub of resolveNeeded) {
+        const key = `${sub.location.lat},${sub.location.lng}`;
+        if (resolvedMap[key]) continue;
+
+        try {
+          const result = await resolveLocation(sub.location.lat, sub.location.lng);
+          if (result) {
+            setResolvedMap(prev => ({ ...prev, [key]: result }));
+          } else {
+            setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
+          }
+        } catch (err) {
+          console.error("Location resolution error:", err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+      isResolvingRef.current = false;
+    };
+
+    resolveAll();
+  }, [visibleData, resolvedMap]);
+
   const handleExport = () => {
-    const exportData = filteredData.map(row => ({
-        "Tesisat No": row.tesisatNo,
-        "Bağlantı Nesnesi": row.baglantiNesnesi,
-        "Abone Tipi": row.aboneTipi,
-        "Abone Kış Ort. (m3)": row.personalWinterAvg,
-        "Bina Kış Medyan (m3)": row.buildingWinterMedian,
-        "Sapma (%)": row.deviationPercentage.toFixed(2),
-        "Komşu Sayısı": row.neighborCount,
-        "Ocak": row.monthlyData.jan,
-        "Şubat": row.monthlyData.feb,
-        "Mart": row.monthlyData.mar,
-        "Enlem": row.location.lat,
-        "Boylam": row.location.lng,
-    }));
+    const exportData = filteredData.map(row => {
+        const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+        return {
+            "Tesisat No": row.tesisatNo,
+            "Bağlantı Nesnesi": row.baglantiNesnesi,
+            "Abone Tipi": row.aboneTipi,
+            "Abone Kış Ort. (m3)": row.personalWinterAvg,
+            "Bina Kış Medyan (m3)": row.buildingWinterMedian,
+            "Sapma (%)": row.deviationPercentage.toFixed(2),
+            "Komşu Sayısı": row.neighborCount,
+            "Ocak": row.monthlyData.jan,
+            "Şubat": row.monthlyData.feb,
+            "Mart": row.monthlyData.mar,
+            "Adres": resolved?.fullName || row.address,
+            "İlçe (OSM)": resolved?.district || ""
+        };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -178,9 +220,18 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
                           <Building2 className="h-3 w-3 text-indigo-400" />
                           <span className="font-mono text-xs text-slate-700 font-bold">{row.baglantiNesnesi}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
+                      <div className="flex items-center gap-1.5 mt-0.5 opacity-60" title={(() => {
+                          const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                          return resolved?.fullName || 'Konum Belirleniyor...';
+                      })()}>
                           <MapPin className="h-3 w-3 text-slate-400" />
-                          <span className="font-mono text-[10px] text-slate-500">{row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}</span>
+                          <span className="font-mono text-[10px] text-slate-500">
+                              {(() => {
+                                  const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
+                                  if (resolved) return `${resolved.district} / ${resolved.city}`;
+                                  return `${row.location.lat.toFixed(4)}, ${row.location.lng.toFixed(4)}`;
+                              })()}
+                          </span>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
                           <Users className="h-3 w-3 text-indigo-400" />

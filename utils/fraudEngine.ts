@@ -92,6 +92,7 @@ export const isPointInPolygon = (lat: number, lng: number, polygon: [number, num
 };
 
 export const identifyDistrictGeometric = (lat: number, lng: number): string => {
+  // Fallback to hardcoded Istanbul districts
   for (const [name, poly] of Object.entries(ISTANBUL_DISTRICTS)) {
     if (isPointInPolygon(lat, lng, poly)) return name;
   }
@@ -104,7 +105,7 @@ export const identifyDistrictGeometric = (lat: number, lng: number): string => {
       if (lat >= 39.8 && lat <= 40.0 && lng >= 42.9 && lng <= 43.2) return 'Ağrı Merkez';
       if (lat >= 39.1 && lat <= 39.3 && lng >= 42.7 && lng <= 43.0) return 'Patnos / Ağrı';
       
-      return 'Türkiye / Bölge';
+      return 'Konum Belirleniyor...';
   }
   
   return 'Bilinmeyen Konum';

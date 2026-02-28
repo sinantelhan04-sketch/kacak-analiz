@@ -32,6 +32,11 @@ export default [
         process: "readonly",
         HTMLInputElement: "readonly",
         HTMLSelectElement: "readonly",
+        fetch: "readonly",
+        sessionStorage: "readonly",
+        localStorage: "readonly",
+        AbortSignal: "readonly",
+        DOMException: "readonly",
       },
     },
     plugins: {
