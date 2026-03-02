@@ -92,7 +92,6 @@ export const isPointInPolygon = (lat: number, lng: number, polygon: [number, num
 };
 
 export const identifyDistrictGeometric = (lat: number, lng: number): string => {
-  // Fallback to hardcoded Istanbul districts
   for (const [name, poly] of Object.entries(ISTANBUL_DISTRICTS)) {
     if (isPointInPolygon(lat, lng, poly)) return name;
   }
@@ -105,7 +104,7 @@ export const identifyDistrictGeometric = (lat: number, lng: number): string => {
       if (lat >= 39.8 && lat <= 40.0 && lng >= 42.9 && lng <= 43.2) return 'Ağrı Merkez';
       if (lat >= 39.1 && lat <= 39.3 && lng >= 42.7 && lng <= 43.0) return 'Patnos / Ağrı';
       
-      return 'Konum Belirleniyor...';
+      return 'Türkiye / Bölge';
   }
   
   return 'Bilinmeyen Konum';
@@ -168,7 +167,8 @@ const updateTotalScore = (score: RiskScore): RiskScore => {
         score.breakdown.referenceMatch + 
         score.breakdown.consumptionAnomaly + 
         score.breakdown.trendInconsistency + 
-        score.breakdown.geoRisk
+        score.breakdown.geoRisk +
+        score.breakdown.buildingAnomaly
     );
 
     let riskLevel: RiskScore['riskLevel'] = 'Düşük';
@@ -221,8 +221,8 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
         });
 
         // --- ADIM 3: Grup Büyüklüğü Kuralı ---
-        // Referans alınacak "temiz" komşu sayısı en az 8 olmalı.
-        if (cleanSubscribers.length < 8) return;
+        // Referans alınacak "temiz" komşu sayısı en az 5 olmalı.
+        if (cleanSubscribers.length < 5) return;
 
         // Referans Medyanı (Sadece temiz abonelerden)
         const cleanWinterAvgs = cleanSubscribers.map(s => (s.consumption.jan + s.consumption.feb + s.consumption.mar) / 3);
@@ -308,7 +308,7 @@ export const createBaseRiskScore = (
         rawAboneTipi: sub.rawAboneTipi,
         consumption: sub.consumption,
         totalScore: 0,
-        breakdown: { referenceMatch: 0, consumptionAnomaly: 0, trendInconsistency: 0, geoRisk: 0 },
+        breakdown: { referenceMatch: 0, consumptionAnomaly: 0, trendInconsistency: 0, geoRisk: 0, buildingAnomaly: 0 },
         riskLevel: 'Düşük',
         reason: '',
         heatingSensitivity: heatingRatio,
@@ -514,6 +514,64 @@ export const applyGeoAnalysis = (score: RiskScore, nearbyHighRiskPoints: {lat: n
     });
 };
 
+// 6. BUILDING ANOMALY INTEGRATION
+export const applyBuildingAnalysisToRiskScores = (scores: RiskScore[], subscribers: Subscriber[]): RiskScore[] => {
+    const buildingRisks = analyzeBuildingConsumption(subscribers);
+    const riskMap = new Map<string, BuildingRisk>();
+    buildingRisks.forEach(br => riskMap.set(br.tesisatNo, br));
+
+    return scores.map(score => {
+        const br = riskMap.get(score.tesisatNo);
+        if (br) {
+            const reasons = score.reason ? score.reason.split(', ') : [];
+            if (!reasons.includes('Bina Tüketim Sapması')) {
+                reasons.push('Bina Tüketim Sapması');
+            }
+            
+            // Calculate penalty based on deviation
+            // deviationPercentage is negative, e.g., -60
+            const penalty = Math.min(40, Math.abs(br.deviationPercentage) / 2);
+
+            return updateTotalScore({
+                ...score,
+                breakdown: { ...score.breakdown, buildingAnomaly: penalty },
+                reason: reasons.join(', ')
+            });
+        }
+        return score;
+    });
+};
+
+// 7. UNIFIED ANALYSIS RUNNER
+export const runUnifiedAnalysis = (
+    subscribers: Subscriber[], 
+    fraudMuhatapIds: Set<string>, 
+    fraudTesisatIds: Set<string>,
+    nearbyHighRiskPoints: {lat: number, lng: number}[]
+): RiskScore[] => {
+    // 1. Base initialization
+    let scores = subscribers.map(s => createBaseRiskScore(s, fraudMuhatapIds, fraudTesisatIds));
+
+    // 2. Apply Tampering
+    scores = scores.map(s => applyTamperingAnalysis(s));
+
+    // 3. Apply Rule 120
+    scores = scores.map(s => applyRule120Analysis(s));
+
+    // 4. Apply Inconsistency
+    scores = scores.map(s => applyInconsistencyAnalysis(s));
+
+    // 5. Apply Building Anomaly
+    scores = applyBuildingAnalysisToRiskScores(scores, subscribers);
+
+    // 6. Apply Geo Analysis
+    scores = scores.map(s => applyGeoAnalysis(s, nearbyHighRiskPoints));
+
+    // Final sorting
+    scores.sort((a, b) => b.totalScore - a.totalScore);
+    return scores;
+};
+
 // --- DEMO DATA GENERATOR ---
 export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds: Set<string>, fraudTesisatIds: Set<string> } => {
   const subscribers: Subscriber[] = [];
@@ -551,9 +609,9 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     
     let bn = `BN-${id}`;
     // Make sure some people live in the same building for demo purposes
-    // Every 5th person shares location with 4th person
+    // Every 15th person starts a new building
     let loc = getRandomPointInDistrict(district);
-    if (i > 5 && i % 5 !== 0) {
+    if (i > 15 && i % 15 !== 0) {
         loc = subscribers[i-1].location;
         bn = subscribers[i-1].baglantiNesnesi || `BN-${id}`; // Share BN to simulate building
     }

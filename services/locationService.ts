@@ -160,3 +160,6 @@ export const resolveLocationOSM = async (
     return null;
   }
 };
+
+// Vercel build hatasını çözmek için eski isimlendirmeye alias ekliyoruz
+export const resolveLocation = resolveLocationOSM;

@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, ScanSearch, Radar, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, Radar, CheckCircle2, Printer } from 'lucide-react';
 
 interface ExplainerModalProps {
   isOpen: boolean;
@@ -11,38 +11,52 @@ interface ExplainerModalProps {
 const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 print:p-0 print:block print:relative print:z-auto">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity print:hidden"
         onClick={onClose}
       ></div>
 
       {/* Modal Content */}
-      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col relative z-10 animate-slide-up ring-1 ring-slate-200">
+      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col relative z-10 animate-slide-up ring-1 ring-slate-200 print:shadow-none print:max-h-none print:ring-0 print:rounded-none print:w-full print:max-w-none print:overflow-visible">
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-20">
+        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-20 print:static print:border-b-2 print:border-black">
           <div>
             <h2 className="text-3xl font-extrabold text-slate-900 flex items-center gap-4 tracking-tight">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 rotate-3">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 rotate-3 print:hidden">
                 <Radar className="h-7 w-7 text-white" />
               </div>
               Sistem Nasıl Çalışır?
             </h2>
-            <p className="text-base text-slate-500 mt-2 pl-16 font-medium">Uçtan uca veri işleme hattı, tescilli tespit algoritmaları ve üretken yapay zeka entegrasyonu.</p>
+            <p className="text-base text-slate-500 mt-2 pl-16 font-medium print:pl-0 print:text-black">Uçtan uca veri işleme hattı, tescilli tespit algoritmaları ve üretken yapay zeka entegrasyonu.</p>
           </div>
-          <button 
-              onClick={onClose}
-              className="p-2.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600 border border-transparent hover:border-slate-200"
-          >
-              <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-2 print:hidden">
+            <button 
+                onClick={handlePrint}
+                className="p-2.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-blue-600 border border-transparent hover:border-slate-200 flex items-center gap-2"
+                title="Sayfayı Yazdır"
+            >
+                <Printer className="h-6 w-6" />
+                <span className="text-sm font-bold hidden sm:block">Yazdır</span>
+            </button>
+            <button 
+                onClick={onClose}
+                className="p-2.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600 border border-transparent hover:border-slate-200"
+            >
+                <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Body */}
-        <div className="overflow-y-auto p-0 custom-scrollbar bg-[#F5F5F7]">
+        <div className="overflow-y-auto p-0 custom-scrollbar bg-[#F5F5F7] print:overflow-visible print:bg-white">
           
           <div className="max-w-5xl mx-auto py-10 px-6 space-y-10">
 
@@ -71,11 +85,11 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                     {/* Step 2 */}
                     <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm relative z-10 group hover:border-blue-400 transition-all hover:shadow-xl hover:-translate-y-1">
                         <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner">
-                            <ScanSearch className="h-7 w-7 text-blue-600" />
+                            <Zap className="h-7 w-7 text-blue-600" />
                         </div>
-                        <h4 className="font-bold text-slate-900 mb-2 text-lg">Çok Katmanlı Analiz</h4>
+                        <h4 className="font-bold text-slate-900 mb-2 text-lg">Birleşik Risk Puanlaması</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            Milyonlarca satırlık veri kümesi, 6 katmanlı tescilli risk algoritmalarımızdan geçer. Her abone için gerçek zamanlı, 0-100 ölçeğinde dinamik bir <strong>Risk Skoru</strong> üretilir.
+                            Tüm modüller (Bypass, 120 Kuralı, Bina Sapması, Konum) tek bir potada eritilir. Her abone için 0-100 arası <strong>Bütünleşik Risk Skoru</strong> üretilerek en kritik vakalar otomatik olarak en üste sıralanır.
                         </p>
                     </div>
 
@@ -149,11 +163,11 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                                 <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm">
                                     <Building2 className="h-6 w-6 text-indigo-600" />
                                 </div>
-                                <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100">Dinamik</span>
+                                <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100">Dinamik Puan</span>
                             </div>
                             <h4 className="font-bold text-slate-900 text-lg">Bina/Komşu Analizi</h4>
                             <p className="text-sm text-slate-500 mt-2 mb-4 leading-relaxed">
-                                Aynı lokasyon ve bina tipindeki komşuların tüketim ortalamaları ile kıyaslama yapılır. Ortalamadan %60 sapan aboneler radara girer.
+                                Aynı binadaki en az 5 "temiz" komşunun medyan tüketimi ile kıyaslama yapılır. Ortalamadan %60 sapan aboneler, sapma oranına göre +40 puana kadar risk skoru alır.
                             </p>
                             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                                 <div className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 w-[50%]"></div>
@@ -213,7 +227,7 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <h4 className="font-bold text-slate-900 text-lg">Sıcak Bölgeler</h4>
                             <p className="text-sm text-slate-500 mt-2 mb-4 leading-relaxed">
-                                Bilinen kaçak noktalarına coğrafi yakınlık analizi yapılır. Riskli bölgelerdeki şüpheli tüketimler ek puan ile önceliklendirilir.
+                                Bilinen kaçak noktalarına coğrafi yakınlık analizi yapılır. 120 Kuralı şüphesi taşıyan ve riskli bölgelerde bulunan aboneler ek puan ile önceliklendirilir.
                             </p>
                             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                                 <div className="h-full bg-gradient-to-r from-red-400 to-red-600 w-[30%]"></div>

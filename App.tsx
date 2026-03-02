@@ -16,7 +16,8 @@ import StoppedMeterView from './components/StoppedMeterView';
 import Sidebar from './components/Sidebar';
 import DashboardChart from './components/DashboardChart';
 import ExplainerModal from './components/ExplainerModal';
-import { generateDemoData, createBaseRiskScore, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis, analyzeBuildingConsumption } from './utils/fraudEngine';
+import LandingGuide from './components/LandingGuide';
+import { generateDemoData, applyTamperingAnalysis, applyInconsistencyAnalysis, applyRule120Analysis, applyGeoAnalysis, analyzeBuildingConsumption, runUnifiedAnalysis, normalizeId } from './utils/fraudEngine';
 import { generateComprehensiveReport } from './services/geminiService';
 import { RiskScore, EngineStats, Subscriber, ReferenceLocation, AnalysisStatus, BuildingRisk } from './types';
 import * as XLSX from 'xlsx';
@@ -25,10 +26,13 @@ import { processFiles } from './utils/dataLoader';
 const App: React.FC = () => {
   // Stages: setup (upload) -> dashboard (loaded but idle) -> analyzing (processing)
   const [appStage, setAppStage] = useState<'setup' | 'dashboard'>('setup');
+  const [showLanding, setShowLanding] = useState<boolean>(true);
   const [dashboardView, setDashboardView] = useState<'general' | 'tampering' | 'inconsistent' | 'rule120' | 'georisk' | 'ai-report' | 'building' | 'weather' | 'stopped'>('general');
 
   // DATA STATE
   const [rawSubscribers, setRawSubscribers] = useState<Subscriber[]>([]); // Holds parsed Excel data
+  const [refMuhatapIds, setRefMuhatapIds] = useState<Set<string>>(new Set());
+  const [refTesisatIds, setRefTesisatIds] = useState<Set<string>>(new Set());
   const [refLocations, setRefLocations] = useState<ReferenceLocation[]>([]); 
 
   // ANALYSIS RESULT STATE
@@ -145,12 +149,19 @@ const App: React.FC = () => {
       setLoadingProgress(95);
       setLoadingStatusText("Risk analizleri tamamlanıyor...");
 
-      // --- RUN BASE ANALYSIS (Main Thread - Fast enough for scored data) ---
-      const initialRisks = data.subscribers.map((sub) => createBaseRiskScore(sub, data.refMuhatapIds, data.refTesisatIds));
-      
-      // Sort by initial score
-      initialRisks.sort((a,b) => b.totalScore - a.totalScore);
+      // --- RUN UNIFIED ANALYSIS (Main Thread - Fast enough for scored data) ---
+      const highRiskPoints = [
+          ...data.subscribers.filter(s => data.refTesisatIds.has(normalizeId(s.tesisatNo))).map(s => s.location),
+          ...data.refLocations.map(r => ({ lat: r.lat, lng: r.lng }))
+      ];
 
+      const initialRisks = runUnifiedAnalysis(
+          data.subscribers, 
+          data.refMuhatapIds, 
+          data.refTesisatIds, 
+          highRiskPoints
+      );
+      
       // DETECT CITY AND DISTRICTS
       const cityCounts: Record<string, number> = {};
       const districtSet = new Set<string>();
@@ -178,11 +189,23 @@ const App: React.FC = () => {
       setAvailableDistricts(Array.from(districtSet).sort());
       
       setRawSubscribers(data.subscribers);
+      setRefMuhatapIds(data.refMuhatapIds);
+      setRefTesisatIds(data.refTesisatIds);
       setRefLocations(data.refLocations); 
       setRiskData(initialRisks);
       updateStats(initialRisks);
+
+      const bRisks = analyzeBuildingConsumption(data.subscribers);
+      setBuildingRiskData(bRisks);
       
-      setAnalysisStatus(prev => ({ ...prev, reference: true }));
+      setAnalysisStatus({
+          reference: true,
+          tampering: true,
+          inconsistent: true,
+          rule120: true,
+          georisk: true,
+          buildingAnomaly: true
+      });
       setDuplicateInfo({ totalRows: data.rawCount, uniqueSubs: data.subscribers.length });
 
       setLoadingProgress(100);
@@ -190,6 +213,42 @@ const App: React.FC = () => {
   };
 
   // --- ON-DEMAND ANALYSIS RUNNER ---
+  const handleRunAllAnalyses = async () => {
+      setRunningAnalysis('reference'); // Show activity
+      setLoadingStatusText("Tüm analizler yapılıyor...");
+      
+      // Allow UI to render
+      await new Promise(r => setTimeout(r, 100));
+
+      const highRiskPoints = [
+          ...riskData.filter(r => r.totalScore >= 80 && r.location.lat !== 0).map(r => r.location),
+          ...refLocations.map(r => ({ lat: r.lat, lng: r.lng }))
+      ];
+
+      const updatedData = runUnifiedAnalysis(
+          rawSubscribers, 
+          refMuhatapIds, 
+          refTesisatIds, 
+          highRiskPoints
+      );
+
+      setRiskData(updatedData);
+      updateStats(updatedData);
+
+      const bRisks = analyzeBuildingConsumption(rawSubscribers);
+      setBuildingRiskData(bRisks);
+
+      setAnalysisStatus({
+          reference: true,
+          tampering: true,
+          inconsistent: true,
+          rule120: true,
+          georisk: true,
+          buildingAnomaly: true
+      });
+      setRunningAnalysis(null);
+  };
+
   const handleRunModuleAnalysis = async (module: keyof AnalysisStatus) => {
       if (analysisStatus[module]) return; // Already run
       
@@ -255,6 +314,7 @@ const App: React.FC = () => {
 
   const handleReset = () => {
       setAppStage('setup');
+      setShowLanding(true);
       setRiskData([]);
       setRawSubscribers([]);
       setRefLocations([]);
@@ -270,6 +330,8 @@ const App: React.FC = () => {
       setValidationError(null);
       if (fileInputRefA.current) fileInputRefA.current.value = '';
       if (fileInputRefB.current) fileInputRefB.current.value = '';
+      setRefMuhatapIds(new Set());
+      setRefTesisatIds(new Set());
   };
 
   const handleAiInsights = async () => {
@@ -363,6 +425,10 @@ const App: React.FC = () => {
 
   // --- VIEW RENDER ---
   if (appStage === 'setup') {
+     if (showLanding) {
+         return <LandingGuide onStart={() => setShowLanding(false)} />;
+     }
+
      return (
         <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col items-center justify-center p-6 font-sans">
             
@@ -370,6 +436,14 @@ const App: React.FC = () => {
                  {/* Decorative blurred blobs */}
                  <div className="absolute top-0 left-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl -ml-20 -mt-20"></div>
                  <div className="absolute bottom-0 right-0 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl -mr-20 -mb-20"></div>
+
+                 {/* Back to Guide */}
+                 <button 
+                    onClick={() => setShowLanding(true)}
+                    className="absolute top-8 left-8 text-[#86868B] hover:text-[#1D1D1F] text-sm font-bold flex items-center gap-2 transition-colors z-20"
+                 >
+                    &larr; Rehbere Dön
+                 </button>
 
                  {/* Error Msg */}
                  {validationError && (
@@ -433,13 +507,37 @@ const App: React.FC = () => {
                 </div>
 
                 {loadingProgress > 0 && (
-                     <div className="w-full max-w-lg mb-8 bg-[#F5F5F7] rounded-2xl p-5 border border-white/50 relative z-10">
-                        <div className="flex justify-between text-xs font-bold text-[#86868B] mb-3 uppercase tracking-wide">
-                             <span>{loadingStatusText}</span>
-                             <span>%{loadingProgress}</span>
+                     <div className="w-full max-w-lg mb-8 bg-white rounded-3xl p-6 shadow-2xl border border-gray-100 relative z-10 overflow-hidden">
+                        {/* Animated background glow */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-purple-50/50 to-blue-50/50 animate-shimmer -z-10"></div>
+                        
+                        <div className="flex justify-between items-end mb-4">
+                             <div className="flex flex-col gap-1">
+                               <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wider">Durum</span>
+                               <span className="text-sm font-bold text-[#1D1D1F]">{loadingStatusText}</span>
+                             </div>
+                             <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                               %{loadingProgress}
+                             </span>
                         </div>
-                        <div className="w-full bg-white h-2.5 rounded-full overflow-hidden shadow-inner">
-                             <div className="h-full bg-apple-blue transition-all duration-300 rounded-full" style={{ width: `${loadingProgress}%` }}></div>
+                        
+                        <div className="w-full bg-[#F5F5F7] h-3 rounded-full overflow-hidden shadow-inner relative">
+                             <div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 ease-out rounded-full relative" 
+                                style={{ width: `${loadingProgress}%` }}
+                             >
+                               {/* Shimmer effect on the progress bar itself */}
+                               <div className="absolute top-0 right-0 bottom-0 w-20 bg-white/30 blur-[4px] animate-shimmer"></div>
+                             </div>
+                        </div>
+                        
+                        {/* Decorative dots */}
+                        <div className="flex justify-between mt-4 px-1">
+                          {[0, 25, 50, 75, 100].map((mark) => (
+                            <div key={mark} className="flex flex-col items-center gap-1">
+                              <div className={`w-1 h-1 rounded-full ${loadingProgress >= mark ? 'bg-purple-500' : 'bg-gray-300'}`}></div>
+                            </div>
+                          ))}
                         </div>
                      </div>
                 )}
@@ -447,16 +545,25 @@ const App: React.FC = () => {
                 <button 
                     onClick={handleLoadData}
                     disabled={loadingProgress > 0 && loadingProgress < 100}
-                    className="w-full max-w-sm bg-[#1D1D1F] hover:bg-black text-white font-semibold text-lg py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative z-10 hover:scale-[1.02] active:scale-95"
+                    className="w-full max-w-sm bg-[#1D1D1F] hover:bg-black text-white font-semibold text-lg py-4 rounded-full shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative z-10 hover:scale-[1.02] active:scale-95 mb-4"
                 >
                     {loadingProgress > 0 && loadingProgress < 100 ? (
                         <Loader2 className="animate-spin h-5 w-5" /> 
                     ) : (
                         <>
-                            Analizi Başlat <ChevronRight className="h-5 w-5" />
+                            Verileri Yükle & Analizi Başlat <ChevronRight className="h-5 w-5" />
                         </>
                     )}
                 </button>
+
+                {!files.a && !files.b && loadingProgress === 0 && (
+                    <button 
+                        onClick={handleLoadData}
+                        className="text-[#86868B] hover:text-apple-blue text-sm font-bold transition-colors flex items-center gap-2"
+                    >
+                        <Zap className="h-4 w-4" /> Demo Verisi ile Deneyin
+                    </button>
+                )}
             </div>
         </div>
       );
@@ -519,6 +626,15 @@ const App: React.FC = () => {
                     >
                          <BrainCircuit className="h-4 w-4" />
                          {isGeneratingReport ? 'Analiz Ediliyor...' : aiReport ? 'Raporu Aç' : 'AI Analiz'}
+                    </button>
+
+                    <button 
+                        onClick={handleRunAllAnalyses}
+                        disabled={runningAnalysis !== null || riskData.length === 0}
+                        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-full transition-all border bg-apple-blue text-white hover:bg-blue-600 shadow-sm hover:shadow hover:scale-105 disabled:opacity-50`}
+                    >
+                         {runningAnalysis ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                         Tüm Analizleri Çalıştır
                     </button>
                     
                     <div className="w-px h-6 bg-gray-300/50 mx-1"></div>

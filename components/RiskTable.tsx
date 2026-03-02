@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RiskScore } from '../types';
 import { AlertTriangle, MapPin, User, Building2, ThermometerSnowflake, Wrench, Activity, Ban, ChevronDown, Search } from 'lucide-react';
-import { resolveLocation, ResolvedLocation } from '../services/locationService';
 
 interface RiskTableProps {
   data: RiskScore[];
@@ -11,8 +10,6 @@ interface RiskTableProps {
 const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
   const [visibleCount, setVisibleCount] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
-  const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedLocation>>({});
-  const isResolvingRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -31,42 +28,6 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
   );
 
   const visibleData = filteredData.slice(0, visibleCount);
-
-  // Automatically resolve locations that need it using OSM Nominatim
-  useEffect(() => {
-    if (isResolvingRef.current) return;
-
-    const resolveNeeded = visibleData.filter(sub => {
-      const notResolvedYet = !resolvedMap[`${sub.location.lat},${sub.location.lng}`];
-      const hasLocation = sub.location && sub.location.lat !== 0;
-      return notResolvedYet && hasLocation;
-    }).slice(0, 5);
-
-    if (resolveNeeded.length === 0) return;
-
-    const resolveAll = async () => {
-      isResolvingRef.current = true;
-      for (const sub of resolveNeeded) {
-        const key = `${sub.location.lat},${sub.location.lng}`;
-        if (resolvedMap[key]) continue;
-
-        try {
-          const result = await resolveLocation(sub.location.lat, sub.location.lng);
-          if (result) {
-            setResolvedMap(prev => ({ ...prev, [key]: result }));
-          } else {
-            setResolvedMap(prev => ({ ...prev, [key]: { lat: sub.location.lat, lng: sub.location.lng, district: 'Bilinmiyor', city: '', country: '' } }));
-          }
-        } catch (err) {
-          console.error("Location resolution error:", err);
-        }
-        await new Promise(resolve => setTimeout(resolve, 1100));
-      }
-      isResolvingRef.current = false;
-    };
-
-    resolveAll();
-  }, [visibleData, resolvedMap]);
 
   // Helper to determine badge style (Apple Chips style)
   const renderReasonBadge = (reason: string) => {
@@ -92,6 +53,10 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
     else if (reason.includes('Konum') || reason.includes('Bölgesel')) {
       style = "bg-apple-purple/10 text-apple-purple";
       icon = <MapPin className="h-3 w-3 mr-1" />;
+    }
+    else if (reason.includes('Bina Tüketim')) {
+      style = "bg-apple-green/10 text-apple-green";
+      icon = <Building2 className="h-3 w-3 mr-1" />;
     }
 
     return (
@@ -156,22 +121,9 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                 </td>
                 <td className="px-6 py-4">
                   {row.location.lat !== 0 ? (
-                      <div className="flex flex-col">
-                          <span className="text-xs font-bold text-[#1D1D1F] flex items-center gap-1" title={(() => {
-                              const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                              return resolved?.fullName || 'Konum Belirleniyor...';
-                          })()}>
-                              <MapPin className="h-3 w-3 text-rose-500" />
-                              {(() => {
-                                  const resolved = resolvedMap[`${row.location.lat},${row.location.lng}`];
-                                  if (resolved) return `${resolved.district} / ${resolved.city}`;
-                                  return row.district || 'Belirleniyor...';
-                              })()}
-                          </span>
-                          <span className="text-[10px] text-[#86868B] font-mono mt-0.5">
-                              {row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}
-                          </span>
-                      </div>
+                      <span className="text-xs font-medium text-[#86868B] bg-[#F5F5F7] px-2 py-1 rounded-lg">
+                          {row.location.lat.toFixed(4)}, {row.location.lng.toFixed(4)}
+                      </span>
                   ) : (
                       <span className="text-xs text-gray-300">—</span>
                   )}

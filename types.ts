@@ -63,6 +63,7 @@ export interface RiskScore {
     consumptionAnomaly: number;
     trendInconsistency: number;
     geoRisk: number;
+    buildingAnomaly: number;
   };
   riskLevel: 'Seviye 1 (Kritik)' | 'Seviye 2 (Yüksek)' | 'Seviye 3 (Orta)' | 'Düşük';
   reason: string;
