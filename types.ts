@@ -1,37 +1,39 @@
 
 
 export interface MonthlyData {
-  jan: number;
-  feb: number;
-  mar: number;
-  apr: number;
-  may: number;
-  jun: number;
-  jul: number;
-  aug: number;
-  sep: number;
-  oct: number;
-  nov: number;
-  dec: number;
+  // Monthly keys (optional now)
+  jan_23?: number; feb_23?: number; mar_23?: number; apr_23?: number; may_23?: number; jun_23?: number;
+  jul_23?: number; aug_23?: number; sep_23?: number; oct_23?: number; nov_23?: number; dec_23?: number;
+  jan_24?: number; feb_24?: number; mar_24?: number; apr_24?: number; may_24?: number; jun_24?: number;
+  jul_24?: number; aug_24?: number; sep_24?: number; oct_24?: number; nov_24?: number; dec_24?: number;
+  
+  // Simplified keys
+  pastYearTotal?: number;
+  currentYearTotal?: number;
+  isSimplified?: boolean;
 }
+
+export type MonthKey = keyof MonthlyData;
 
 export interface Subscriber {
   tesisatNo: string;
   muhatapNo: string; 
-  baglantiNesnesi?: string; // ADDED
+  pastYearContractNo?: string;
+  currentYearContractNo?: string;
+  baglantiNesnesi?: string;
   relatedMuhatapNos: string[]; 
-  address: string; // Still kept for display if available
+  address: string;
   location: {
     lat: number;
     lng: number;
   };
-  city?: string;      // NEW: Parsed from Excel
-  district?: string;  // NEW: Parsed from Excel
+  city?: string;
+  district?: string;
   aboneTipi: 'Residential' | 'Commercial' | 'Industrial';
   rawAboneTipi?: string;
   consumption: MonthlyData;
-  monthsPresent: (keyof MonthlyData)[];
-  monthsWithMuhatap: (keyof MonthlyData)[];
+  monthsPresent: MonthKey[];
+  monthsWithMuhatap: MonthKey[];
   isVacant: boolean;
 }
 
@@ -45,6 +47,8 @@ export interface ReferenceLocation {
 export interface RiskScore {
   tesisatNo: string;
   muhatapNo: string;
+  pastYearContractNo?: string;
+  currentYearContractNo?: string;
   baglantiNesnesi?: string; // ADDED
   address: string;
   location: {
@@ -84,6 +88,11 @@ export interface RiskScore {
     dropDetails: string[]; 
     isSemesterSuspect: boolean; 
     volatilityScore: number;
+  };
+  yoYAnalysis?: {
+    winterChangePercent: number; // YoY change in winter consumption
+    summerChangePercent: number; // YoY change in summer consumption
+    isYoYSuspect: boolean;       // True if current year is significantly lower than previous
   };
 }
 
@@ -133,5 +142,6 @@ export interface AnalysisStatus {
   inconsistent: boolean;
   rule120: boolean;
   georisk: boolean;
-  buildingAnomaly: boolean; // NEW flag
+  buildingAnomaly: boolean;
+  yoy: boolean; // NEW flag
 }

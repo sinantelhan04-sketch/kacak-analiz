@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useMemo } from 'react';
-import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, Building2, ChevronRight } from 'lucide-react';
+import { CheckCircle, BrainCircuit, FileSpreadsheet, FileText, XCircle, ShieldCheck, Zap, Loader2, Play, BookOpen, UploadCloud, Building2, ChevronRight, Download } from 'lucide-react';
 import StatsCards from './components/StatsCards';
 import RiskTable from './components/RiskTable';
 import TamperingTable from './components/TamperingTable';
@@ -49,7 +49,8 @@ const App: React.FC = () => {
       inconsistent: false,
       rule120: false,
       georisk: false,
-      buildingAnomaly: false
+      buildingAnomaly: false,
+      yoy: false
   });
   const [runningAnalysis, setRunningAnalysis] = useState<string | null>(null);
 
@@ -79,7 +80,7 @@ const App: React.FC = () => {
     setLoadingProgress(0);
     setLoadingStatusText("Hazırlanıyor...");
     setDuplicateInfo(null);
-    setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false });
+    setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false, yoy: false });
     setBuildingRiskData([]);
 
     // Check if files are present
@@ -204,7 +205,8 @@ const App: React.FC = () => {
           inconsistent: true,
           rule120: true,
           georisk: true,
-          buildingAnomaly: true
+          buildingAnomaly: true,
+          yoy: true
       });
       setDuplicateInfo({ totalRows: data.rawCount, uniqueSubs: data.subscribers.length });
 
@@ -244,7 +246,8 @@ const App: React.FC = () => {
           inconsistent: true,
           rule120: true,
           georisk: true,
-          buildingAnomaly: true
+          buildingAnomaly: true,
+          yoy: true
       });
       setRunningAnalysis(null);
   };
@@ -321,7 +324,7 @@ const App: React.FC = () => {
       setBuildingRiskData([]);
       setStats({ totalScanned: 0, level1Count: 0, level2Count: 0, level3Count: 0 });
       setAiReport('');
-      setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false });
+      setAnalysisStatus({ reference: false, tampering: false, inconsistent: false, rule120: false, georisk: false, buildingAnomaly: false, yoy: false });
       setFiles({ a: null, b: null });
       setDuplicateInfo(null);
       setAvailableDistricts([]);
@@ -487,6 +490,50 @@ const App: React.FC = () => {
                         <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
                             {files.a ? <span className="text-apple-green font-bold">{files.a}</span> : 'Sabıkalı abone ve tesisat numaralarını içeren dosya.'}
                         </p>
+                        {!files.a && (
+                          <div className="flex flex-col items-center gap-1 mt-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const headers = ["Tesisat No", "Muhatap No", "Enlem", "Boylam"];
+                                const rows = [
+                                  ["100001", "900001", "41.0123", "28.9765"],
+                                  ["100002", "900002", "41.0234", "28.9876"],
+                                  ["100003", "900003", "41.0345", "28.9987"]
+                                ];
+                                let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+                                const encodedUri = encodeURI(csvContent);
+                                const link = document.createElement("a");
+                                link.setAttribute("href", encodedUri);
+                                link.setAttribute("download", "ornek_referans_listesi.csv");
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              className="text-[10px] font-bold text-apple-blue hover:underline flex items-center gap-1"
+                            >
+                              <Download className="h-3 w-3" /> Örnek CSV İndir
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const data = [
+                                  ["Tesisat No", "Muhatap No", "Enlem", "Boylam"],
+                                  ["100001", "900001", 41.0123, 28.9765],
+                                  ["100002", "900002", 41.0234, 28.9876],
+                                  ["100003", "900003", 41.0345, 28.9987]
+                                ];
+                                const ws = XLSX.utils.aoa_to_sheet(data);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, "ReferansListesi");
+                                XLSX.writeFile(wb, "ornek_referans_listesi.xlsx");
+                              }}
+                              className="text-[10px] font-bold text-apple-green hover:underline flex items-center gap-1"
+                            >
+                              <FileSpreadsheet className="h-3 w-3" /> Örnek XLSX İndir
+                            </button>
+                          </div>
+                        )}
                     </div>
 
                     <div 
@@ -501,8 +548,55 @@ const App: React.FC = () => {
                         </div>
                         <h3 className="font-semibold text-[#1D1D1F] mb-1">Tüketim Verisi</h3>
                         <p className="text-xs text-[#86868B] max-w-[200px] text-center font-medium">
-                             {files.b ? <span className="text-apple-green font-bold">{files.b}</span> : 'Aylık tüketim, adres ve abone bilgilerini içeren dosya.'}
+                             {files.b ? <span className="text-apple-green font-bold">{files.b}</span> : 'Yıllık tüketim (Geçmiş/Şimdiki Yıl), adres ve abone bilgilerini içeren dosya.'}
                         </p>
+                        {!files.b && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const headers = [
+                                "Tesisat No", "Önceki Yıl Sözleşme No", "Şimdiki Yıl Sözleşme No", "Baglanti Nesnesi", "Abone Tipi", 
+                                "Enlem", "Boylam", "Dönem", "Gecmis Yil Tuketim", "Simdiki Yil Tuketim"
+                              ];
+                              const rows = [
+                                ["100001", "SZ-2023-001", "SZ-2024-001", "BN-101", "Mesken", "41.0123", "28.9765", "Şubat", "2400", "1200"],
+                                ["100002", "SZ-2023-002", "SZ-2024-002", "BN-102", "Ticari", "41.0234", "28.9876", "Şubat", "5000", "4800"],
+                                ["100003", "SZ-2023-003", "SZ-2024-099", "BN-103", "Mesken", "41.0345", "28.9987", "Şubat", "1800", "400"]
+                              ];
+                              let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+                              const encodedUri = encodeURI(csvContent);
+                              const link = document.createElement("a");
+                              link.setAttribute("href", encodedUri);
+                              link.setAttribute("download", "ornek_tuketim_verisi.csv");
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                            className="mt-2 text-[10px] font-bold text-apple-blue hover:underline flex items-center gap-1"
+                          >
+                            <Download className="h-3 w-3" /> Örnek CSV İndir
+                          </button>
+                        )}
+                        {!files.b && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const data = [
+                                ["Tesisat No", "Önceki Yıl Sözleşme No", "Şimdiki Yıl Sözleşme No", "Baglanti Nesnesi", "Abone Tipi", "Enlem", "Boylam", "Dönem", "Gecmis Yil Tuketim", "Simdiki Yil Tuketim"],
+                                ["100001", "SZ-2023-001", "SZ-2024-001", "BN-101", "Mesken", 41.0123, 28.9765, "Şubat", 2400, 1200],
+                                ["100002", "SZ-2023-002", "SZ-2024-002", "BN-102", "Ticari", 41.0234, 28.9876, "Şubat", 5000, 4800],
+                                ["100003", "SZ-2023-003", "SZ-2024-099", "BN-103", "Mesken", 41.0345, 28.9987, "Şubat", 1800, 400]
+                              ];
+                              const ws = XLSX.utils.aoa_to_sheet(data);
+                              const wb = XLSX.utils.book_new();
+                              XLSX.utils.book_append_sheet(wb, ws, "TuketimVerisi");
+                              XLSX.writeFile(wb, "ornek_tuketim_verisi.xlsx");
+                            }}
+                            className="mt-1 text-[10px] font-bold text-apple-green hover:underline flex items-center gap-1"
+                          >
+                            <FileSpreadsheet className="h-3 w-3" /> Örnek XLSX İndir
+                          </button>
+                        )}
                     </div>
                 </div>
 

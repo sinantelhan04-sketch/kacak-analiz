@@ -102,7 +102,7 @@ const GeoRiskTable: React.FC<GeoRiskTableProps> = ({ data }) => {
             <div className="bg-red-50 p-1.5 rounded-md border border-red-200 animate-pulse">
                 <MapPin className="h-5 w-5 text-red-500" />
             </div>
-            Bölgesel Risk & Düşük Tüketim
+            Coğrafi Harita Analizi
             </h3>
             <button 
                 onClick={handleExport}

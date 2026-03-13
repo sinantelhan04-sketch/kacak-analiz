@@ -15,7 +15,9 @@ import {
   Activity,
   Zap,
   Download,
-  Loader2
+  Loader2,
+  CloudSun,
+  OctagonPause
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -286,7 +288,9 @@ const LandingGuide: React.FC<LandingGuideProps> = ({ onStart }) => {
                     { icon: Zap, title: "Müdahale (Bypass) Analizi", desc: "Mevsimsel tüketim anomalilerini inceler. Kış aylarında ısınma ihtiyacına rağmen tüketimin Yaz seviyesinde kalması durumunu yakalar." },
                     { icon: Building2, title: "Bina Tüketim Analizi", desc: "Aynı binadaki en az 5 'temiz' komşunun medyan tüketimi ile kıyaslama yapar. Ortalamadan %60 sapan aboneleri listeler." },
                     { icon: Activity, title: "Tutarsız Trend Analizi", desc: "Tüketimdeki ani düşüşleri, sabit endeksleri (düz çizgi) veya doğal olmayan aşırı dalgalı (ZigZag) profilleri otomatik olarak saptar." },
-                    { icon: Map, title: "Coğrafi Risk Haritası", desc: "Bilinen kaçak noktalarına coğrafi yakınlık analizi yapar. Riskli bölgelerdeki şüpheli tüketimleri harita üzerinde görselleştirir." },
+                    {icon: Map, title: "Coğrafi Risk Haritası", desc: "Bilinen kaçak noktalarına coğrafi yakınlık analizi yapar. Riskli bölgelerdeki şüpheli tüketimleri harita üzerinde görselleştirir." },
+                    { icon: CloudSun, title: "Hava Koşulları Analizi", desc: "MGM'den alınan sıcaklık verileriyle (HDD) tüketimi normalize eder. İklimden bağımsız olarak binasına göre düşük kalan aboneleri tespit eder." },
+                    { icon: OctagonPause, title: "Duran Sayaç Analizi", desc: "Kışın tüketimi duran veya müstakil kombi olmasına rağmen ısınma tüketimi görünmeyen (Yaz=Kış) kritik vakaları yakalar." },
                     { icon: BrainCircuit, title: "Yapay Zeka Raporu", desc: "Google Gemini AI, üretilen tüm istatistikleri okuyarak bir 'Dijital Denetçi' gibi davranır ve stratejik özet raporlar sunar." }
                   ].map((item, i) => (
                     <div key={i} className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4 hover:border-apple-orange/40 hover:shadow-md transition-all group">

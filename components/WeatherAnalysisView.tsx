@@ -34,7 +34,7 @@ const WeatherAnalysisView: React.FC<WeatherAnalysisViewProps> = ({ subscribers }
         const hddData = await getMGMHeatingDegreeDays(selectedCity);
         
         // 2. Run Analysis with fetched data
-        const res = analyzeWeatherNormalized(subscribers, selectedCity, selectedDistrict, hddData);
+        const res = analyzeWeatherNormalized(subscribers, selectedCity, selectedDistrict, hddData, selectedYear);
         
         setResults(res);
         setHasRun(true);

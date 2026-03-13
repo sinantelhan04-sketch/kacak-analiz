@@ -192,7 +192,7 @@ const TamperingTable: React.FC<TamperingTableProps> = ({ data }) => {
                 </td>
                 <td className="px-6 py-4">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-orange-50 text-orange-600 border-orange-200">
-                    BYPASS ŞÜPHESİ
+                    MÜDAHALE ŞÜPHESİ
                   </span>
                 </td>
               </tr>

@@ -14,7 +14,7 @@ export interface ResolvedLocation {
  * Nominatim reverse geocoding ile koordinattan il/ilçe çözümler
  * NOT: Browser'da direkt çağırmak yerine backend proxy veya caching katmanı önerilir
  */
-export const resolveLocationOSM = async (
+export const resolveLocation = async (
   lat: number,
   lng: number,
   options: { signal?: AbortSignal; cacheTimeout?: number } = {}
@@ -156,10 +156,7 @@ export const resolveLocationOSM = async (
     if (err instanceof DOMException && err.name === "AbortError") {
       return null; // kullanıcı iptal etti
     }
-    console.error("[resolveLocationOSM]", err);
+    console.error("[resolveLocation]", err);
     return null;
   }
 };
-
-// Vercel build hatasını çözmek için eski isimlendirmeye alias ekliyoruz
-export const resolveLocation = resolveLocationOSM;

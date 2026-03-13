@@ -115,16 +115,16 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
           if (buildingTypeFilter === 'bina' && count <= 4) return false;
       }
 
-      // If global toggle is active, apply "Dec > 0, Jan/Feb == 0" to everyone
+      // If global toggle is active, apply "Dec > 0, Feb == 0" to everyone
       if (onlyDecActive) {
-          return dec > 0 && jan === 0 && feb === 0;
+          return dec > 0 && feb === 0;
       }
 
       // Apply logic based on the subscriber's own type
       if (isSpecialType(sub.rawAboneTipi)) {
          // Special Case: Resmi Kurum (Isınma)
-         // Logic: Dec > 0 AND Jan == 0 AND Feb == 0
-         return dec > 0 && jan === 0 && feb === 0;
+         // Logic: Dec > 0 AND Feb == 0
+         return dec > 0 && feb === 0;
       }
 
       // Default Logic: Dec == 0 AND Jan == 0 AND Feb == 0
@@ -222,7 +222,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
         "Aralık (m3)": row.consumption.dec,
         "Ocak (m3)": row.consumption.jan,
         "Şubat (m3)": row.consumption.feb,
-        "Durum": isSpecialType(row.rawAboneTipi) ? 'Aralık Var, Ocak/Şubat Yok' : '3 Ay Boyunca Tüketim Yok'
+        "Durum": (row.consumption.dec > 0 && row.consumption.feb === 0) ? (row.consumption.jan === 0 ? 'Ocak/Şubat Kesintisi' : 'Şubat Kesintisi') : '3 Ay Boyunca Tüketim Yok'
       };
     });
 
@@ -456,7 +456,7 @@ const StoppedMeterView: React.FC<StoppedMeterViewProps> = ({ subscribers }) => {
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 w-fit">
-                                                {activeTab === 'mustakil-kombi' ? 'YAZ ≈ KIŞ' : (isSpecialType(row.rawAboneTipi) ? 'Ocak/Şubat Yok' : '3 Ay Yok')}
+                                                {activeTab === 'mustakil-kombi' ? 'YAZ ≈ KIŞ' : (row.consumption.dec > 0 && row.consumption.feb === 0 ? (row.consumption.jan === 0 ? 'Ocak/Şubat Yok' : 'Şubat Yok') : '3 Ay Yok')}
                                             </span>
                                             {isBina && activeTab !== 'mustakil-kombi' && (
                                                 <span className="text-[9px] text-rose-500 font-bold uppercase tracking-tighter">

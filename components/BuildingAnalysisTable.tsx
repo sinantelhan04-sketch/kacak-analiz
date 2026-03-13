@@ -108,7 +108,7 @@ const BuildingAnalysisTable: React.FC<BuildingAnalysisTableProps> = ({ data }) =
             <div className="bg-indigo-50 p-1.5 rounded-md border border-indigo-200 animate-pulse">
                 <Building2 className="h-5 w-5 text-indigo-500" />
             </div>
-            Bina Tüketim Analizi (Komşu Kıyaslaması)
+            Bina Tüketimi Analizi
             </h3>
             <button 
                 onClick={handleExport}

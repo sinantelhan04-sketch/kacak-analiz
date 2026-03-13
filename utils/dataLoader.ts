@@ -1,7 +1,7 @@
 
 import * as XLSX from 'xlsx';
 import proj4 from 'proj4';
-import type { Subscriber, ReferenceLocation, MonthlyData } from '../types';
+import type { Subscriber, ReferenceLocation, MonthlyData, MonthKey } from '../types';
 
 // --- HGM PROJECTION DEFINITION ---
 // Lambert Conformal Conic TC1M (Turkey)
@@ -49,34 +49,59 @@ const normalizeRowData = (row: any[]): any[] => {
     return row;
 };
 
-const getMonthKey = (val: any): keyof MonthlyData | null => {
+const getMonthBase = (val: any): string | null => {
+    if (!val) return null;
+    let s = normalizeTrChars(String(val).trim());
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const trMonths = ['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'];
+    const trShortMonths = ['oca', 'sub', 'mar', 'nis', 'may', 'haz', 'tem', 'agu', 'eyl', 'eki', 'kas', 'ara'];
+    
+    for (let i = 0; i < 12; i++) {
+        if (s.includes(months[i]) || s.includes(trMonths[i]) || s.includes(trShortMonths[i])) {
+            return months[i];
+        }
+    }
+    return null;
+};
+
+const getMonthKey = (val: any): MonthKey | null => {
       if (!val) return null;
-      let s = String(val).trim();
-      if (/^0?1(\.0)?$/.test(s)) return 'jan';
-      if (/^0?2(\.0)?$/.test(s)) return 'feb';
-      if (/^0?3(\.0)?$/.test(s)) return 'mar';
-      if (/^0?4(\.0)?$/.test(s)) return 'apr';
-      if (/^0?5(\.0)?$/.test(s)) return 'may';
-      if (/^0?6(\.0)?$/.test(s)) return 'jun';
-      if (/^0?7(\.0)?$/.test(s)) return 'jul';
-      if (/^0?8(\.0)?$/.test(s)) return 'aug';
-      if (/^0?9(\.0)?$/.test(s)) return 'sep';
-      if (/^10(\.0)?$/.test(s)) return 'oct';
-      if (/^11(\.0)?$/.test(s)) return 'nov';
-      if (/^12(\.0)?$/.test(s)) return 'dec';
-      s = normalizeTrChars(s);
-      if (s.includes('oca') || s.includes('jan')) return 'jan';
-      if (s.includes('sub') || s.includes('feb')) return 'feb';
-      if (s.includes('mar')) return 'mar';
-      if (s.includes('nis') || s.includes('apr')) return 'apr';
-      if (s.includes('may')) return 'may';
-      if (s.includes('haz') || s.includes('jun')) return 'jun';
-      if (s.includes('tem') || s.includes('jul')) return 'jul';
-      if (s.includes('agu') || s.includes('aug')) return 'aug';
-      if (s.includes('eyl') || s.includes('sep')) return 'sep';
-      if (s.includes('eki') || s.includes('oct')) return 'oct';
-      if (s.includes('kas') || s.includes('nov')) return 'nov';
-      if (s.includes('ara') || s.includes('dec')) return 'dec';
+      let s = normalizeTrChars(String(val).trim());
+      
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const trMonths = ['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'];
+      const trShortMonths = ['oca', 'sub', 'mar', 'nis', 'may', 'haz', 'tem', 'agu', 'eyl', 'eki', 'kas', 'ara'];
+      
+      let monthIdx = -1;
+      let year = '';
+
+      // Try to find year in the string
+      const rawS = String(val).toLowerCase();
+      if (rawS.includes('23') || rawS.includes('2023')) year = '23';
+      else if (rawS.includes('24') || rawS.includes('2024')) year = '24';
+      else year = '24'; // Default to 24 if not specified
+
+      // Try numeric format (e.g., 01.2023 or 1)
+      const numericMatch = s.match(/^0?(\d{1,2})(\.202[34])?(\.0)?$/);
+      if (numericMatch) {
+          monthIdx = parseInt(numericMatch[1]) - 1;
+          if (numericMatch[2]) {
+              year = numericMatch[2].includes('23') ? '23' : '24';
+          }
+      } else {
+          // Try text format
+          for (let i = 0; i < 12; i++) {
+              if (s.includes(months[i]) || s.includes(trMonths[i]) || s.includes(trShortMonths[i])) {
+                  monthIdx = i;
+                  break;
+              }
+          }
+      }
+
+      if (monthIdx >= 0 && monthIdx < 12) {
+          return `${months[monthIdx]}_${year}` as MonthKey;
+      }
+      
       return null;
 }
 
@@ -217,6 +242,17 @@ export const processFiles = async (
         const idxMonth = getColIndex(headers, ['ay', 'month', 'donem']);
         const idxCons = getColIndex(headers, ['sm3', 'tuketim', 'm3', 'sarfiyat']);
         
+        // Refine idxCons to avoid matching 'gecmis yil tuketim' or 'simdiki yil tuketim'
+        // if those specific columns are already identified.
+        const idxPastYear = getColIndex(headers, ['gecmis yil tuketim', 'gecmis_yil_tuketim', 'gecmis yil', 'past year']);
+        const idxCurrentYear = getColIndex(headers, ['simdiki yil tuketim', 'simdiki_yil_tuketim', 'simdiki yil', 'current year', 'guncel tuketim']);
+
+        const isSimplifiedHeader = idxPastYear !== -1 || idxCurrentYear !== -1;
+        
+        // Contract No Detection
+        const idxPastContract = getColIndex(headers, ['onceki yil sozlesme no', 'onceki_yil_sozlesme_no', 'gecmis yil sozlesme', 'past year contract']);
+        const idxCurrentContract = getColIndex(headers, ['simdiki yil sozlesme no', 'simdiki_yil_sozlesme_no', 'guncel sozlesme', 'current year contract']);
+
         const wideFormatMap: Partial<Record<keyof MonthlyData, number>> = {};
         if (idxMonth === -1 || idxCons === -1) {
             headers.forEach((h, i) => {
@@ -266,6 +302,8 @@ export const processFiles = async (
 
                 subscriberMap.set(id, {
                     tesisatNo: rawId, muhatapNo: initMuhatap, 
+                    pastYearContractNo: idxPastContract !== -1 ? cleanVal(row[idxPastContract]) : '',
+                    currentYearContractNo: idxCurrentContract !== -1 ? cleanVal(row[idxCurrentContract]) : '',
                     baglantiNesnesi: baglantiVal,
                     relatedMuhatapNos: [initMuhatap],
                     address: idxAddress !== -1 ? cleanVal(row[idxAddress]) : '', 
@@ -274,7 +312,11 @@ export const processFiles = async (
                     district: idxDistrict !== -1 ? cleanVal(row[idxDistrict]) : '',
                     aboneTipi: isCommercial ? 'Commercial' : 'Residential',
                     rawAboneTipi: rawTypeStr,
-                    consumption: {jan:0, feb:0, mar:0, apr:0, may:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0},
+                    consumption: {
+                        jan_23:0, feb_23:0, mar_23:0, apr_23:0, may_23:0, jun_23:0, jul_23:0, aug_23:0, sep_23:0, oct_23:0, nov_23:0, dec_23:0,
+                        jan_24:0, feb_24:0, mar_24:0, apr_24:0, may_24:0, jun_24:0, jul_24:0, aug_24:0, sep_24:0, oct_24:0, nov_24:0, dec_24:0,
+                        pastYearTotal: 0, currentYearTotal: 0, isSimplified: false
+                    },
                     monthsPresent: [],
                     monthsWithMuhatap: [],
                     isVacant: false
@@ -291,7 +333,46 @@ export const processFiles = async (
                 }
             }
 
-            if(idxMonth !== -1 && idxCons !== -1) {
+            if (isSimplifiedHeader) {
+                // Simplified Format (Yearly Totals or Monthly Comparison)
+                const pastVal = parseNum(row[idxPastYear]);
+                const currVal = parseNum(row[idxCurrentYear]);
+
+                if (idxMonth !== -1) {
+                    // Monthly Comparison Format (User's 10-column format)
+                    const monthBase = getMonthBase(row[idxMonth]);
+                    if (monthBase) {
+                        const m23 = `${monthBase}_23` as keyof MonthlyData;
+                        const m24 = `${monthBase}_24` as keyof MonthlyData;
+                        
+                        sub.consumption[m23] = pastVal as any;
+                        sub.consumption[m24] = currVal as any;
+                        
+                        if (!sub.monthsPresent.includes(m23 as MonthKey)) sub.monthsPresent.push(m23 as MonthKey);
+                        if (!sub.monthsPresent.includes(m24 as MonthKey)) sub.monthsPresent.push(m24 as MonthKey);
+                        
+                        // Accumulate totals
+                        sub.consumption.pastYearTotal += pastVal;
+                        sub.consumption.currentYearTotal += currVal;
+                    }
+                } else {
+                    // Pure Simplified Format (Yearly Totals only)
+                    sub.consumption.isSimplified = true;
+                    sub.consumption.pastYearTotal = pastVal;
+                    sub.consumption.currentYearTotal = currVal;
+                    
+                    // Fallback distribution to keep monthly rules from crashing
+                    const pastAvg = pastVal / 12;
+                    const currAvg = currVal / 12;
+                    
+                    ['jan_23', 'feb_23', 'mar_23', 'apr_23', 'may_23', 'jun_23', 'jul_23', 'aug_23', 'sep_23', 'oct_23', 'nov_23', 'dec_23'].forEach(m => {
+                        sub.consumption[m as keyof MonthlyData] = pastAvg as any;
+                    });
+                    ['jan_24', 'feb_24', 'mar_24', 'apr_24', 'may_24', 'jun_24', 'jul_24', 'aug_24', 'sep_24', 'oct_24', 'nov_24', 'dec_24'].forEach(m => {
+                        sub.consumption[m as keyof MonthlyData] = currAvg as any;
+                    });
+                }
+            } else if(idxMonth !== -1 && idxCons !== -1) {
                 const monthKey = getMonthKey(row[idxMonth]);
                 if (monthKey) {
                     sub.consumption[monthKey] = parseNum(row[idxCons]);
