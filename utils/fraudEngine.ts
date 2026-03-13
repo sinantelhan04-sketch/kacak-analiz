@@ -1,7 +1,7 @@
 
 
 
-import { Subscriber, RiskScore, BuildingRisk, MonthlyData, MonthKey } from '../types';
+import { Subscriber, RiskScore, BuildingRisk, MonthlyData } from '../types';
 
 // --- District Boundaries (Approximate Polygons for Istanbul) ---
 // Format: [Lat, Lng]
@@ -117,14 +117,8 @@ export const normalizeId = (id: any): string => {
 };
 
 // --- STATISTICAL HELPERS ---
-const getWinterAvg = (data: MonthlyData, year: '23' | '24' = '24') => {
-    if (year === '23') return ((data.dec_23 || 0) + (data.jan_23 || 0) + (data.feb_23 || 0)) / 3;
-    return ((data.dec_24 || 0) + (data.jan_24 || 0) + (data.feb_24 || 0)) / 3;
-};
-const getSummerAvg = (data: MonthlyData, year: '23' | '24' = '24') => {
-    if (year === '23') return (data.jun_23 + data.jul_23 + data.aug_23) / 3;
-    return (data.jun_24 + data.jul_24 + data.aug_24) / 3;
-};
+const getWinterAvg = (data: any) => (data.dec + data.jan + data.feb) / 3;
+const getSummerAvg = (data: any) => (data.jun + data.jul + data.aug) / 3;
 
 const getStandardDeviation = (array: number[]) => {
   const n = array.length;
@@ -220,9 +214,9 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
         // Ocak, Şubat ve Mart aylarının HEPSİNDE tüketim > 25 sm³ olmalı.
         // (Bu aynı zamanda 0 olanları da eler)
         const cleanSubscribers = subs.filter(s => {
-            const j = s.consumption.jan_24;
-            const f = s.consumption.feb_24;
-            const m = s.consumption.mar_24;
+            const j = s.consumption.jan;
+            const f = s.consumption.feb;
+            const m = s.consumption.mar;
             return j > 25 && f > 25 && m > 25;
         });
 
@@ -231,7 +225,7 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
         if (cleanSubscribers.length < 5) return;
 
         // Referans Medyanı (Sadece temiz abonelerden)
-        const cleanWinterAvgs = cleanSubscribers.map(s => (s.consumption.jan_24 + s.consumption.feb_24 + s.consumption.mar_24) / 3);
+        const cleanWinterAvgs = cleanSubscribers.map(s => (s.consumption.jan + s.consumption.feb + s.consumption.mar) / 3);
         const buildingMedian = calculateMedian(cleanWinterAvgs);
         
         // Sıfıra bölme hatası önlemi
@@ -239,9 +233,9 @@ export const analyzeBuildingConsumption = (subscribers: Subscriber[]): BuildingR
 
         // --- ADIM 4: Şüpheli Tespiti (Tüm bina sakinleri taranır) ---
         subs.forEach(s => {
-            const jan = s.consumption.jan_24;
-            const feb = s.consumption.feb_24;
-            const mar = s.consumption.mar_24;
+            const jan = s.consumption.jan;
+            const feb = s.consumption.feb;
+            const mar = s.consumption.mar;
             
             const personalAvg = (jan + feb + mar) / 3;
 
@@ -297,15 +291,13 @@ export const createBaseRiskScore = (
         district = district.toLocaleUpperCase('tr');
     }
 
-    const winterAvg = getWinterAvg(sub.consumption, '24');
-    const summerAvg = getSummerAvg(sub.consumption, '24');
+    const winterAvg = getWinterAvg(sub.consumption);
+    const summerAvg = getSummerAvg(sub.consumption);
     const heatingRatio = winterAvg / (summerAvg + 0.1);
 
     const baseScore: RiskScore = {
         tesisatNo: sub.tesisatNo,
         muhatapNo: sub.muhatapNo,
-        pastYearContractNo: sub.pastYearContractNo,
-        currentYearContractNo: sub.currentYearContractNo,
         baglantiNesnesi: sub.baglantiNesnesi,
         address: sub.address,
         location: sub.location,
@@ -369,7 +361,7 @@ export const applyTamperingAnalysis = (score: RiskScore): RiskScore => {
     if (isSeasonalFlat) {
         if (!score.isTamperingSuspect) { 
             anomalyScore += 30;
-            reasons.push('Müdahale Analizi (Bypass Şüphesi)');
+            reasons.push('Mevsimsel Fark Yok (Bypass Şüphesi)');
         }
     }
 
@@ -394,10 +386,9 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
         return score;
     }
 
-    // User Request: Use current year consumption (2024 keys)
-    const dec = score.consumption.dec_24 || 0;
-    const jan = score.consumption.jan_24 || 0;
-    const feb = score.consumption.feb_24 || 0;
+    const dec = score.consumption.dec;
+    const jan = score.consumption.jan;
+    const feb = score.consumption.feb;
     
     const isDecSuspect = dec > 25 && dec < 110;
     const isJanSuspect = jan > 25 && jan < 110;
@@ -414,7 +405,7 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
             const total = dec + jan + feb;
             if (total < 150) penalty = 45; 
             anomalyScore += penalty;
-            reasons.push('120 sm³ Kuralı (Şimdiki Yıl Kış Şüpheli)');
+            reasons.push('120 Kuralı (Aralık-Ocak-Şubat Şüpheli)');
         }
     }
 
@@ -427,31 +418,15 @@ export const applyRule120Analysis = (score: RiskScore): RiskScore => {
     });
 };
 
-// 4. INCONSISTENCY ANALYSIS (YoY + Trend)
+// 4. INCONSISTENCY ANALYSIS (Trend/Slope)
 export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
-    // User Request: Compare past year vs current year for the same months
-    const months: (keyof MonthlyData)[] = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    let yoyInconsistencyCount = 0;
-    const yoyDetails: string[] = [];
-
-    months.forEach(m => {
-        const past = (score.consumption as any)[`${m}_23`] || 0;
-        const current = (score.consumption as any)[`${m}_24`] || 0;
-        
-        // Significant drop (>50%) compared to same month last year, if past was significant (>50)
-        if (past > 50 && current < past * 0.5) {
-            yoyInconsistencyCount++;
-            yoyDetails.push(`${m.toUpperCase()} YoY Düşüş (%${(((current-past)/past)*100).toFixed(0)})`);
-        }
-    });
-
-    const winterVals = [score.consumption.dec_24 || 0, score.consumption.jan_24 || 0, score.consumption.feb_24 || 0];
-    const winterAvg = (winterVals[0] + winterVals[1] + winterVals[2]) / 3;
+    const winterVals = [score.consumption.dec, score.consumption.jan, score.consumption.feb];
+    const winterAvg = score.seasonalStats.winterAvg;
     const winterStd = getStandardDeviation(winterVals);
     const isCommercial = score.aboneTipi === 'Commercial';
 
     const isFlatline = winterStd < 1.5 && winterAvg > 10;
-    const winterTrendVals = [score.consumption.nov_24 || 0, score.consumption.dec_24 || 0, score.consumption.jan_24 || 0, score.consumption.feb_24 || 0];
+    const winterTrendVals = [score.consumption.nov, score.consumption.dec, score.consumption.jan, score.consumption.feb];
     const slope = calculateTrendSlope(winterTrendVals);
     const slopeLimit = isCommercial ? -50 : -15;
     const isSharpDecline = slope < slopeLimit && winterAvg > 20;
@@ -460,28 +435,22 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
     let trendScore = score.breakdown.trendInconsistency;
     const inconsistentData = { ...score.inconsistentData };
 
-    if (yoyInconsistencyCount >= 2) {
-        trendScore += 20;
-        reasons.push('Tutarsız Tüketim (Yıllık Kıyaslama Sapması)');
-        inconsistentData.dropDetails.push(...yoyDetails);
-    }
-
-    if (isFlatline && !reasons.includes('Tutarsız Tüketim (Sabit)')) {
+    if (isFlatline && !reasons.includes('Düz Çizgi (Sabit Tüketim)')) {
         trendScore += 25;
-        reasons.push('Tutarsız Tüketim (Sabit)');
-    } else if (isSharpDecline && !reasons.some(r => r.includes('Tutarsız Tüketim (Ani Düşüş)'))) {
+        reasons.push('Düz Çizgi (Sabit Tüketim)');
+    } else if (isSharpDecline && !reasons.some(r => r.includes('Ani Tüketim Düşüşü'))) {
         trendScore += 20;
-        reasons.push(`Tutarsız Tüketim (Ani Düşüş - Eğim: ${slope.toFixed(1)})`);
+        reasons.push(`Ani Tüketim Düşüşü (Eğim: ${slope.toFixed(1)})`);
     }
 
     const MIN_CONS = 40;
-    const janToFebDrop = (score.consumption.jan_24 || 0) > MIN_CONS && (score.consumption.feb_24 || 0) < (score.consumption.jan_24 || 0) * 0.75; 
+    const janToFebDrop = score.consumption.jan > MIN_CONS && score.consumption.feb < score.consumption.jan * 0.75; 
     
     if (janToFebDrop && !isCommercial) {
-        const slopeBefore = calculateTrendSlope([score.consumption.nov_24 || 0, score.consumption.dec_24 || 0, score.consumption.jan_24 || 0]);
+        const slopeBefore = calculateTrendSlope([score.consumption.nov, score.consumption.dec, score.consumption.jan]);
         if (slopeBefore > -5) {
             inconsistentData.isSemesterSuspect = true;
-            inconsistentData.dropDetails.push(`Sömestr Şüphesi: Ocak(${score.consumption.jan_24}) -> Şubat(${score.consumption.feb_24})`);
+            inconsistentData.dropDetails.push(`Sömestr Şüphesi: Ocak(${score.consumption.jan}) -> Şubat(${score.consumption.feb})`);
         }
     }
 
@@ -498,9 +467,9 @@ export const applyInconsistencyAnalysis = (score: RiskScore): RiskScore => {
 
     return updateTotalScore({
         ...score,
+        inconsistentData,
         breakdown: { ...score.breakdown, trendInconsistency: trendScore },
-        reason: reasons.join(', '),
-        inconsistentData
+        reason: reasons.join(', ')
     });
 };
 
@@ -555,8 +524,8 @@ export const applyBuildingAnalysisToRiskScores = (scores: RiskScore[], subscribe
         const br = riskMap.get(score.tesisatNo);
         if (br) {
             const reasons = score.reason ? score.reason.split(', ') : [];
-            if (!reasons.includes('Bina Tüketimi Sapması')) {
-                reasons.push('Bina Tüketimi Sapması');
+            if (!reasons.includes('Bina Tüketim Sapması')) {
+                reasons.push('Bina Tüketim Sapması');
             }
             
             // Calculate penalty based on deviation
@@ -573,76 +542,7 @@ export const applyBuildingAnalysisToRiskScores = (scores: RiskScore[], subscribe
     });
 };
 
-// 7. YEAR OVER YEAR (YoY) ANALYSIS & STOPPED METER
-export const applyYoYAnalysis = (score: RiskScore): RiskScore => {
-    let winter23 = 0;
-    let winter24 = 0;
-    let summer23 = 0;
-    let summer24 = 0;
-
-    if (score.consumption.isSimplified) {
-        winter23 = score.consumption.pastYearTotal || 0;
-        winter24 = score.consumption.currentYearTotal || 0;
-        summer23 = 0;
-        summer24 = 0;
-    } else {
-        winter23 = getWinterAvg(score.consumption, '23');
-        winter24 = getWinterAvg(score.consumption, '24');
-        summer23 = getSummerAvg(score.consumption, '23');
-        summer24 = getSummerAvg(score.consumption, '24');
-    }
-
-    // User Request: Stopped Meter Analysis
-    // "geçmiş yıllarda tüketimi olup şimdiki yılda tüketimi olmayan aboneleri analiz et"
-    // "geçmiş ve şimdiki yılda sözleşmesi olan aboneler dahil olsun"
-    const hasPastContract = score.pastYearContractNo && score.pastYearContractNo.trim() !== '' && score.pastYearContractNo !== '-';
-    const hasCurrentContract = score.currentYearContractNo && score.currentYearContractNo.trim() !== '' && score.currentYearContractNo !== '-';
-    
-    const isStoppedMeter = hasPastContract && hasCurrentContract && winter23 > 50 && winter24 === 0;
-
-    // Winter YoY Change
-    const winterChange = winter23 > 0 ? ((winter24 - winter23) / winter23) * 100 : 0;
-    // Summer YoY Change
-    const summerChange = summer23 > 0 ? ((summer24 - summer23) / summer23) * 100 : 0;
-
-    const reasons = score.reason ? score.reason.split(', ') : [];
-    let anomalyScore = score.breakdown.consumptionAnomaly;
-
-    if (isStoppedMeter) {
-        anomalyScore += 60; // High priority
-        reasons.push('Duran Sayaç (Sözleşme Var, Tüketim Yok)');
-    }
-
-    // Suspect if winter consumption dropped by more than 40% while summer stayed stable or increased
-    let isWinterYoYSuspect = score.consumption.isSimplified 
-        ? (winter23 > 100 && winterChange < -40)
-        : (winter23 > 100 && winterChange < -40 && summerChange > -10);
-    
-    const contractChanged = score.pastYearContractNo && score.currentYearContractNo && score.pastYearContractNo !== score.currentYearContractNo;
-    
-    if (isWinterYoYSuspect && !isStoppedMeter) {
-        if (contractChanged) {
-            anomalyScore += 10; 
-            reasons.push(`Yıllık Düşüş (%${winterChange.toFixed(1)}) - Sözleşme Değişmiş`);
-        } else {
-            anomalyScore += 25;
-            reasons.push(`Yıllık Kış Düşüşü (%${winterChange.toFixed(1)})`);
-        }
-    }
-
-    return updateTotalScore({
-        ...score,
-        yoYAnalysis: {
-            winterChangePercent: parseFloat(winterChange.toFixed(1)),
-            summerChangePercent: parseFloat(summerChange.toFixed(1)),
-            isYoYSuspect: isWinterYoYSuspect || isStoppedMeter
-        },
-        breakdown: { ...score.breakdown, consumptionAnomaly: anomalyScore },
-        reason: reasons.join(', ')
-    });
-};
-
-// 8. UNIFIED ANALYSIS RUNNER
+// 7. UNIFIED ANALYSIS RUNNER
 export const runUnifiedAnalysis = (
     subscribers: Subscriber[], 
     fraudMuhatapIds: Set<string>, 
@@ -661,13 +561,10 @@ export const runUnifiedAnalysis = (
     // 4. Apply Inconsistency
     scores = scores.map(s => applyInconsistencyAnalysis(s));
 
-    // 5. Apply YoY Analysis (NEW)
-    scores = scores.map(s => applyYoYAnalysis(s));
-
-    // 6. Apply Building Anomaly
+    // 5. Apply Building Anomaly
     scores = applyBuildingAnalysisToRiskScores(scores, subscribers);
 
-    // 7. Apply Geo Analysis
+    // 6. Apply Geo Analysis
     scores = scores.map(s => applyGeoAnalysis(s, nearbyHighRiskPoints));
 
     // Final sorting
@@ -719,11 +616,9 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
         bn = subscribers[i-1].baglantiNesnesi || `BN-${id}`; // Share BN to simulate building
     }
 
-    let data: MonthlyData = {
-      jan_23: 300, feb_23: 280, mar_23: 200, apr_23: 100, may_23: 50, jun_23: 20,
-      jul_23: 15, aug_23: 15, sep_23: 30, oct_23: 80, nov_23: 150, dec_23: 290,
-      jan_24: 310, feb_24: 290, mar_24: 210, apr_24: 110, may_24: 60, jun_24: 25,
-      jul_24: 20, aug_24: 20, sep_24: 35, oct_24: 85, nov_24: 155, dec_24: 300
+    let data = {
+      jan: 300, feb: 280, mar: 200, apr: 100, may: 50, jun: 20,
+      jul: 15, aug: 15, sep: 30, oct: 80, nov: 150, dec: 290
     };
     if (isCommercial) {
         (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
@@ -732,12 +627,12 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     }
 
     if (i === 12) { 
-        data.jan_24 = 35; data.feb_24 = 50; data.mar_24 = 40; 
-        data.dec_23 = 150; 
+        data.jan = 35; data.feb = 50; data.mar = 40; 
+        data.dec = 150; 
     }
     if (i === 13) { 
-        data.jan_24 = 95; data.feb_24 = 100; data.mar_24 = 90; 
-        data.dec_23 = 150; 
+        data.jan = 95; data.feb = 100; data.mar = 90; 
+        data.dec = 150; 
     }
 
     let muhatapNo = `M-${id}`;
@@ -747,26 +642,20 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
     if (isFraud) {
       const fraudType = Math.random();
       if (fraudType < 0.30) {
-          // Bypass: Low in winter 24
-          data.dec_23 = 50; data.jan_24 = 55; data.feb_24 = 50;
+          data.jun = 20; data.jul = 20; data.aug = 20;
+          data.dec = 50; data.jan = 55; data.feb = 50;
       }
       else if (fraudType < 0.5) {
         const badMuhatap = `M-REF-${Math.floor(Math.random() * 20)}`;
         relatedMuhatapNos.push(badMuhatap); 
       }
-      else if (fraudType < 0.7) {
-        // YoY Drop: High in 23, Low in 24
-        data.dec_23 = 50; data.jan_24 = 40; data.feb_24 = 45;
-        data.dec_22 = 300; // Not in data but logic will compare 23 vs 24
-        data.jan_23 = 320; data.feb_23 = 310;
-      }
       else {
-        data.jan_24 = 60; data.feb_24 = 60; data.dec_23 = 60;
+        data.jan = 60; data.feb = 60; data.dec = 60;
       }
     }
     
     (Object.keys(data) as Array<keyof typeof data>).forEach(k => {
-        data[k as keyof MonthlyData] = Math.max(0, Math.floor(data[k as keyof MonthlyData] * (0.9 + Math.random() * 0.2)));
+        data[k] = Math.max(0, Math.floor(data[k] * (0.9 + Math.random() * 0.2)));
     });
 
     subscribers.push({
@@ -776,13 +665,13 @@ export const generateDemoData = (): { subscribers: Subscriber[], fraudMuhatapIds
       relatedMuhatapNos: relatedMuhatapNos,
       address: `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`,
       location: loc,
-      city: 'İSTANBUL',
+      city: 'İSTANBUL', // Demo data is istanbul
       district: district,
       aboneTipi: isCommercial ? 'Commercial' : 'Residential',
       rawAboneTipi: isCommercial ? 'TİCARİ İŞLETME' : (Math.random() < 0.2 ? 'KONUT (MERKEZİ)' : 'KONUT (KOMBİ)'), 
       consumption: data,
-      monthsPresent: Object.keys(data) as MonthKey[],
-      monthsWithMuhatap: Object.keys(data) as MonthKey[],
+      monthsPresent: Object.keys(data) as (keyof MonthlyData)[],
+      monthsWithMuhatap: Object.keys(data) as (keyof MonthlyData)[],
       isVacant: false
     });
   }

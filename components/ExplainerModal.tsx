@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, Radar, CheckCircle2, Printer, CloudSun, OctagonPause } from 'lucide-react';
+import { X, ShieldCheck, ThermometerSnowflake, TrendingDown, MapPin, Building2, Zap, BrainCircuit, Lightbulb, FileSpreadsheet, ArrowRight, Radar, CheckCircle2, Printer } from 'lucide-react';
 
 interface ExplainerModalProps {
   isOpen: boolean;
@@ -231,46 +231,6 @@ const ExplainerModal: React.FC<ExplainerModalProps> = ({ isOpen, onClose }) => {
                             </p>
                             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                                 <div className="h-full bg-gradient-to-r from-red-400 to-red-600 w-[30%]"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Card: Weather Analysis */}
-                    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-apple hover:shadow-2xl transition-all group relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-sky-50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-500"></div>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="w-12 h-12 bg-sky-100 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm">
-                                    <CloudSun className="h-6 w-6 text-sky-600" />
-                                </div>
-                                <span className="bg-sky-50 text-sky-700 text-xs font-bold px-3 py-1 rounded-full border border-sky-100">İklim Norm.</span>
-                            </div>
-                            <h4 className="font-bold text-slate-900 text-lg">Hava Koşulları Analizi</h4>
-                            <p className="text-sm text-slate-500 mt-2 mb-4 leading-relaxed">
-                                MGM'den alınan Isıtma Derece Gün (HDD) verileriyle tüketim normalize edilir. Hava sıcaklığından bağımsız olarak binasına göre düşük kalan aboneler yakalanır.
-                            </p>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                <div className="h-full bg-gradient-to-r from-sky-400 to-sky-600 w-[55%]"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Card: Stopped Meter */}
-                    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-apple hover:shadow-2xl transition-all group relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-500"></div>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm">
-                                    <OctagonPause className="h-6 w-6 text-rose-600" />
-                                </div>
-                                <span className="bg-rose-50 text-rose-700 text-xs font-bold px-3 py-1 rounded-full border border-rose-100">Kritik</span>
-                            </div>
-                            <h4 className="font-bold text-slate-900 text-lg">Duran Sayaç Analizi</h4>
-                            <p className="text-sm text-slate-500 mt-2 mb-4 leading-relaxed">
-                                Kış aylarında tüketimi tamamen duran veya "Müstakil Kombi" olmasına rağmen Yaz/Kış tüketimi eşit olan (Isınma yok) şüpheli profiller listelenir.
-                            </p>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                <div className="h-full bg-gradient-to-r from-rose-400 to-rose-600 w-[85%]"></div>
                             </div>
                         </div>
                     </div>

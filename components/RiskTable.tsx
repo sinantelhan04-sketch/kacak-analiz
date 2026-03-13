@@ -58,10 +58,6 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
       style = "bg-apple-green/10 text-apple-green";
       icon = <Building2 className="h-3 w-3 mr-1" />;
     }
-    else if (reason.includes('Yıllık Kış Düşüşü')) {
-      style = "bg-indigo-50 text-indigo-600 border border-indigo-100";
-      icon = <Activity className="h-3 w-3 mr-1" />;
-    }
 
     return (
         <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold mr-1.5 mb-1.5 ${style}`}>
@@ -118,21 +114,7 @@ const RiskTable: React.FC<RiskTableProps> = ({ data }) => {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-semibold text-[#1D1D1F] text-sm tracking-tight">{row.tesisatNo}</span>
-                            <div className="flex flex-col gap-0.5">
-                                {row.currentYearContractNo ? (
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-xs text-[#86868B] font-medium">Sözleşme: {row.currentYearContractNo}</span>
-                                        {row.pastYearContractNo && row.pastYearContractNo !== row.currentYearContractNo && (
-                                            <span className="text-[9px] bg-apple-orange/10 text-apple-orange px-1 rounded font-bold">DEĞİŞTİ</span>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <span className="text-xs text-[#86868B] font-medium">{row.muhatapNo}</span>
-                                )}
-                                {row.pastYearContractNo && row.pastYearContractNo !== row.currentYearContractNo && (
-                                    <span className="text-[9px] text-[#86868B]">Önceki: {row.pastYearContractNo}</span>
-                                )}
-                            </div>
+                            <span className="text-xs text-[#86868B] font-medium">{row.muhatapNo}</span>
                             {row.baglantiNesnesi && <span className="text-[10px] text-slate-400 mt-0.5">BN: {row.baglantiNesnesi}</span>}
                         </div>
                     </div>

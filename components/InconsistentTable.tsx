@@ -68,7 +68,7 @@ const InconsistentTable: React.FC<InconsistentTableProps> = ({ data }) => {
             <div className="bg-pink-50 p-1.5 rounded-md border border-pink-200">
                 <TrendingDown className="h-5 w-5 text-pink-500" />
             </div>
-            Tutarsız Tüketim Analizi
+            Tutarsız Kış Tüketimleri
             </h3>
             <button 
                 onClick={handleExport}

@@ -189,12 +189,10 @@ export const analyzeWeatherNormalized = (
     subscribers: Subscriber[], 
     city: string, 
     district: string,
-    hddData: { jan: number, feb: number, mar: number },
-    year: string = '2024'
+    hddData: { jan: number, feb: number, mar: number }
 ): WeatherRiskResult[] => {
     
     const hdd = hddData;
-    const yearSuffix = year.slice(-2); // '24' for '2024'
 
     // Normalizing Input Targets
     const targetCityNorm = normalizeTr(city);
@@ -216,11 +214,9 @@ export const analyzeWeatherNormalized = (
 
     // 2. Filter Subscribers by Location (Text OR Geo) & Type
     const relevantSubs = subscribers.filter(s => {
-        // Type Filter: More inclusive matching
+        // Type Filter: Only 'konut (kombi)'
         const type = s.rawAboneTipi ? s.rawAboneTipi.toLocaleLowerCase('tr') : '';
-        const isTypeMatch = (type.includes('konut') || type.includes('mesken') || type.includes('daire')) && 
-                           (type.includes('kombi') || !type.includes('merkezi'));
-        
+        const isTypeMatch = type.includes('konut') && type.includes('kombi');
         if (!isTypeMatch) return false;
 
         // --- HYBRID FILTERING LOGIC ---
@@ -279,10 +275,7 @@ export const analyzeWeatherNormalized = (
         
         // Identify "Clean" Neighbors (Consumed gas in all 3 months)
         const cleanNeighbors = subs.filter(s => {
-            const jan = (s.consumption as any)[`jan_${yearSuffix}`] || 0;
-            const feb = (s.consumption as any)[`feb_${yearSuffix}`] || 0;
-            const mar = (s.consumption as any)[`mar_${yearSuffix}`] || 0;
-            return jan > 10 && feb > 10 && mar > 10;
+            return s.consumption.jan > 10 && s.consumption.feb > 10 && s.consumption.mar > 10;
         });
 
         // Min neighbor rule (lowered to 4)
@@ -291,12 +284,9 @@ export const analyzeWeatherNormalized = (
         // Calculate Normalized Average for each clean neighbor
         // Formula: (Consumption / HDD Factor) -> Effectively "Gas per Degree Day"
         const normalizedAvgs = cleanNeighbors.map(s => {
-            const jan = (s.consumption as any)[`jan_${yearSuffix}`] || 0;
-            const feb = (s.consumption as any)[`feb_${yearSuffix}`] || 0;
-            const mar = (s.consumption as any)[`mar_${yearSuffix}`] || 0;
-            const jNorm = jan / (hdd.jan || 1);
-            const fNorm = feb / (hdd.feb || 1);
-            const mNorm = mar / (hdd.mar || 1);
+            const jNorm = s.consumption.jan / (hdd.jan || 1);
+            const fNorm = s.consumption.feb / (hdd.feb || 1);
+            const mNorm = s.consumption.mar / (hdd.mar || 1);
             return (jNorm + fNorm + mNorm) / 3;
         });
 
@@ -307,9 +297,9 @@ export const analyzeWeatherNormalized = (
 
         // Check each subscriber in the building for anomalies
         subs.forEach(s => {
-             const jan = (s.consumption as any)[`jan_${yearSuffix}`] || 0;
-             const feb = (s.consumption as any)[`feb_${yearSuffix}`] || 0;
-             const mar = (s.consumption as any)[`mar_${yearSuffix}`] || 0;
+             const jan = s.consumption.jan;
+             const feb = s.consumption.feb;
+             const mar = s.consumption.mar;
              
              const rawAvg = (jan + feb + mar) / 3;
 
